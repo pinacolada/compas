@@ -4,7 +4,7 @@
   "description": "Compilation ActionScript TypeScript Javascript",
   "main": "main.js",
   "scripts": {
-    "test": "electron ."
+    "essai": "electron ."
   },
   "repository": {
     "type": "git",
@@ -20,6 +20,7 @@
   "license": "ISC",
   "devDependencies": {
     "electron": "^1.7.10",
+    "nodemon": "^1.14.11",
     "typescript": "^2.6.2"
   }
 }

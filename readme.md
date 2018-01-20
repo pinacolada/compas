@@ -40,6 +40,12 @@ Initialisation du dépot **github** : Il faut d'abord exclure le dossier **node_
 - `git status`
 - `git commit -m "Initialisation du dossier Compas"`
 
+Création de ce fichier **readme.md** et ajout au dépot (Commandes `git add .` puis `git status` pour vérifier.)
+
+Création d'un premier fichier **typescript** pour tester la compilation : on veut pouvoir le lancer avec **Electron** (qui se lance par défaut en cherchant un fichier **main.js**. 
+
+Donc on crée un fichier **main.ts** en cliquant sur le + dans l'interface de **Visual Studio Code** :
+
 
 
 

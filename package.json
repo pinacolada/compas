@@ -1,0 +1,25 @@
+{
+  "name": "compas",
+  "version": "1.0.0",
+  "description": "Compilation ActionScript TypeScript Javascript",
+  "main": "main.js",
+  "scripts": {
+    "test": "electron ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "compas"
+  },
+  "keywords": [
+    "Compilation",
+    "Actionscript",
+    "Typescript",
+    "Javascrit"
+  ],
+  "author": "pinacolada@homesweethome.fr",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^1.7.10",
+    "typescript": "^2.6.2"
+  }
+}

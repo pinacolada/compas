@@ -1,14 +1,14 @@
 {
   "name": "compas",
   "version": "1.0.0",
-  "description": "Compilation ActionScript TypeScript Javascript",
+  "description": "Compilation de classes ActionScript en TypeScript puis Javascript",
   "main": "main.js",
   "scripts": {
-    "essai": "electron ."
+    "test": "electron ."
   },
   "repository": {
     "type": "git",
-    "url": "compas"
+    "url": "git+https://github.com/pinacolada/compas.git"
   },
   "keywords": [
     "Compilation",

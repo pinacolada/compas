@@ -1,0 +1,24 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Exécuter le programme",
+        "type": "node",
+        "request": "launch",
+        "cwd": "${workspaceRoot}",
+        "runtimeExecutable": "electron",
+        "windows": {
+          "runtimeExecutable": "electron.cmd"
+        },
+        "args" : ["main.js"]
+      },
+      {
+        "type": "node",
+        "request": "launch",
+        "name": "Electron dans le module",
+        "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron",
+        "program": "${workspaceFolder}/main.js",
+        "protocol": "legacy"
+    },
+   ]
+}

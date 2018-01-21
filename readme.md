@@ -1,6 +1,8 @@
 # COMPAS - JANVIER 2018
 
-## Compilation Actionscript - Typescript - Javascript
+## Le projet
+
+Compilation Actionscript - Typescript - Javascript
 
 * Création de l'équivalent des classes usuelles utilisées en **ActionScript**
 * Création de l'équivalent de ces classes en **Typescript**
@@ -44,11 +46,43 @@ Création de ce fichier **readme.md** et ajout au dépot (Commandes `git add .` 
 
 Création d'un premier fichier **typescript** pour tester la compilation : on veut pouvoir le lancer avec **Electron** (qui se lance par défaut en cherchant un fichier **main.js**. 
 
-Donc on crée un fichier **main.ts** en cliquant sur le + dans l'interface de **Visual Studio Code** :
+Donc on crée un fichier **main.ts** en cliquant sur le + dans l'interface de **Visual Studio Code**. Ce fichier contient tout ce qu'il faut pour ouvrir une fenêtre Electron.
 
+```Javascript
+import { app, BrowserWindow } from "electron";
+let mainWindow:BrowserWindow;
 
+function createWindow ():void {
+  mainWindow = new BrowserWindow({width: 1200, height: 640});
+  mainWindow.loadURL(`file://${__dirname}/index.html`);
+  // Elever les commentaires ci-dessous pour debug :
+  // mainWindow.webContents.openDevTools();  
+}
 
+app.on("ready", createWindow);
 
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
+});
 
+app.on("activate", () => {
+  if (mainWindow === null) {
+    createWindow();
+  }
+});
+```
+Désormais, je verrai le fichier **ts** (Typescript), mais aussi le fichier **.js** (Javascript) et le fichier **.map** (liaison encodée entre ts et js). Dans l'interface de **Visual Studio Code** il est facile de définir les fichiers à ne pas afficher. 
 
+Menu **Fichier**, rubrique **Préférences** : On choisit l'option **Paramètres**.
+  
+L'écran s'ouvre avec à gauche les paramètres par défaut, à droite les paramètres personnalisés. On rajoute aux paramètres personnalisés dans la rubrique :
+```json
+"files.exclude": {
+      "*.js": true,
+      "*.map": true,
+}
+```
+Menu Fichier
 

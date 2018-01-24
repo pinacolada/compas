@@ -84,5 +84,10 @@ L'écran s'ouvre avec à gauche les paramètres par défaut, à droite les param
       "*.map": true,
 }
 ```
-Menu Fichier
+Le fichier renderer.ts doit contenir les modules et les classes. 
+Nous allons regrouper les classes par modules avec un fichier par module et autant de classes que nous le voulons dans le module.
+
+L'architecture Actionscript actuelle ressemble à ceci : quatre gros modules généralistes (display, geom, graph et system).
+Nous allons créer ces quatre modules sous forme de fichiers typescript et chacun contiendra les classes correspondantes.
+
 

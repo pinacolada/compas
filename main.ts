@@ -1,13 +1,12 @@
-import { app, BrowserWindow } from "electron";
-let mainWindow:BrowserWindow;
+import { BrowserWindow, app } from "electron";
+
+let win:BrowserWindow;
 
 function createWindow ():void {
-  mainWindow = new BrowserWindow({width: 1200, height: 640});
-  mainWindow.loadURL(`file://${__dirname}/index.html`);
-  // mainWindow.webContents.openDevTools();
+  win = new BrowserWindow({width: 1024, height: 600});
+  win.loadURL(`file://${__dirname}/index.html`);
+  win.webContents.openDevTools();
 }
-
-app.on("ready", createWindow);
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
@@ -15,8 +14,10 @@ app.on("window-all-closed", () => {
   }
 });
 
+app.on("ready", createWindow);
+
 app.on("activate", () => {
-  if (mainWindow === null) {
+  if (win === null) {
     createWindow();
   }
 });

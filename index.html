@@ -5,6 +5,28 @@
     <title>Comp_as V1.0</title>
 </head>
 <body>
-    <script>require("./renderer");</script>
+    <table id="viewMouse" style="border:1px solid blue">
+        <tr>
+            <td id="lbl1">target</td>
+            <td id="val1">
+                <input type="text" id="inId"></input>
+            </td>
+        </tr>
+        <tr>
+            <td id="lbl2">px</td>
+            <td id="val2">
+                <input type="text" id="inPx"></input>
+            </td>            
+        </tr>
+        <tr>
+            <td id="lbl3">py</td>
+            <td id="val3">
+                <input type="text" id="inPy"></input>
+            </td>            
+        </tr>
+    </table>  
+     <script>
+        require("./renderer");
+    </script>
 </body>
 </html>

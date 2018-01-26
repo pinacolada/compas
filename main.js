@@ -5,7 +5,7 @@ let win;
 function createWindow() {
     win = new electron_1.BrowserWindow({ width: 1024, height: 600 });
     win.loadURL(`file://${__dirname}/index.html`);
-    win.webContents.openDevTools();
+    // win.webContents.openDevTools();
 }
 electron_1.app.on("window-all-closed", () => {
     if (process.platform !== "darwin") {

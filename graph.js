@@ -2,6 +2,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const geom_1 = require("./geom");
 class Color {
+    static hex(rgba) {
+        let t = rgba.split("(")[1].split(",");
+        let [r, g, b] = [parseInt(t[0]), parseInt(t[1]), parseInt(t[2])];
+        return r << 16 | g << 8 & b;
+    }
     /**
      * Renvoie une couleur sous la forme : rgb(r,g,b)
      * @param c couleur entre 0x000000 et 0xFFFFFF
@@ -60,6 +65,12 @@ class Fill {
     get rgba() {
         return Color.rgba(this.color, this.alpha);
     }
+    /**
+     * Valeur RGB pour SVG
+     */
+    get rgb() {
+        return Color.rgb(this.color);
+    }
 }
 exports.Fill = Fill;
 /**
@@ -75,6 +86,10 @@ class Stroke extends Fill {
      */
     constructor(t = 1.0, c = 0x000000, a = 1.0) {
         super(c, a);
+        /**
+         * stroke-linecap = "butt"|"square"|"round"
+         */
+        this.lineCap = "round"; //  stroke-linecap : coupé (butt), carré (square) ou arrondi (round).
         this.thickness = t;
     }
     /**
@@ -148,29 +163,351 @@ class Gradient {
     clear() {
         this.stops = [];
     }
+    /**
+     * Description complète du dégradé en CSS
+     */
     get css() {
         let coul = this.stops.map((s) => s.css).join(",");
         return this.type + "-gradient(" + this.degres + "deg," + coul + ")";
     }
+    get svg() {
+        return "";
+    }
 }
 exports.Gradient = Gradient;
+class GrElement {
+    constructor(gr, type, bg) {
+        this.el = document.createElementNS("http://www.w3.org/2000/svg", type);
+        gr.svg.appendChild(this.el);
+        this.el.id = type + "_" + gr.svg.children.length;
+        if (bg) {
+            if (gr.fill) {
+                this.setAttr("fill", gr.fill.rgba);
+            }
+            else if (gr.gradient) {
+                this.setAttr("fill", "#" + gr.gradient.id);
+            }
+        }
+        else {
+            this.setAttr("fill", "none");
+        }
+        if (gr.stroke) {
+            this.setAttr("stroke", gr.stroke.rgba);
+            if (gr.stroke.thickness != 1) {
+                this.setAttr("stroke-width", gr.stroke.thickness);
+            }
+        }
+    }
+    setAttr(attrName, attrVal) {
+        this.el.setAttribute(attrName, attrVal.toString());
+    }
+}
+class GrCircle extends GrElement {
+    constructor(gr, px, py, radius) {
+        super(gr, "circle", true);
+        this.circle = this.el;
+        this.r = radius;
+        this.x = px;
+        this.y = py;
+    }
+    get x() {
+        return this.cx - this.r;
+    }
+    set x(value) {
+        this.cx = value + this.r;
+    }
+    get y() {
+        return this.cy - this.r;
+    }
+    set y(value) {
+        this.cy = value + this.r;
+    }
+    get cx() {
+        return this.circle.cx.baseVal.value;
+    }
+    set cx(value) {
+        this.circle.cx.baseVal.value = value;
+    }
+    get cy() {
+        return this.circle.cy.baseVal.value;
+    }
+    set cy(value) {
+        this.circle.cy.baseVal.value = value;
+    }
+    get r() {
+        return this.circle.r.baseVal.value;
+    }
+    set r(value) {
+        this.circle.r.baseVal.value = value;
+    }
+}
+class GrEllipse extends GrElement {
+    constructor(gr, x, y, width, height) {
+        super(gr, "ellipse", true);
+        this.ellipse = this.el;
+        this.width = width;
+        this.height = height;
+        this.x = x;
+        this.y = y;
+    }
+    get x() {
+        return this.cx - this.rx;
+    }
+    set x(value) {
+        this.cx = value + this.rx;
+    }
+    get y() {
+        return this.cy - this.ry;
+    }
+    set y(value) {
+        this.cy = value + this.ry;
+    }
+    get cx() {
+        return this.ellipse.cx.baseVal.value;
+    }
+    set cx(value) {
+        this.ellipse.cx.baseVal.value = value;
+    }
+    get cy() {
+        return this.ellipse.cy.baseVal.value;
+    }
+    set cy(value) {
+        this.ellipse.cy.baseVal.value = value;
+    }
+    get rx() {
+        return this.ellipse.rx.baseVal.value;
+    }
+    set rx(value) {
+        this.ellipse.rx.baseVal.value = value;
+    }
+    get ry() {
+        return this.ellipse.ry.baseVal.value;
+    }
+    set ry(value) {
+        this.ellipse.ry.baseVal.value = value;
+    }
+    get width() {
+        return this.rx * 2;
+    }
+    set width(value) {
+        this.rx = value / 2;
+    }
+    get height() {
+        return this.ry * 2;
+    }
+    set height(value) {
+        this.ry = value / 2;
+    }
+}
+class GrLine extends GrElement {
+    constructor(gr, px, py, x, y) {
+        super(gr, "line", false);
+        this.line = this.el;
+        this.x1 = px;
+        this.y1 = py;
+        this.x2 = x;
+        this.y2 = y;
+    }
+    get x1() {
+        return this.line.x1.baseVal.value;
+    }
+    set x1(value) {
+        this.line.x1.baseVal.value = value;
+    }
+    get y1() {
+        return this.line.y1.baseVal.value;
+    }
+    set y1(value) {
+        this.line.y1.baseVal.value = value;
+    }
+    get x2() {
+        return this.line.x2.baseVal.value;
+    }
+    set x2(value) {
+        this.line.x2.baseVal.value = value;
+    }
+    get y2() {
+        return this.line.y2.baseVal.value;
+    }
+    set y2(value) {
+        this.line.y2.baseVal.value = value;
+    }
+}
+class GrPolyline extends GrElement {
+    constructor(gr, startX, startY, points) {
+        super(gr, "polyline", false);
+        this.lines = this.el;
+        this.setAttr("points", startX + " " + startY + " " + points.join(" "));
+    }
+}
+class GrPath extends GrElement {
+    constructor(gr, close, cmd) {
+        super(gr, "path", close);
+        this.command = cmd;
+        this.setAttr("d", this.command);
+    }
+    get command() {
+        return this.el.getAttribute("d");
+    }
+    set command(value) {
+        this.el.setAttribute("d", value);
+    }
+    /**
+     * M = moveto
+     */
+    moveTo(x, y) {
+        let cmd = this.command;
+        this.command = cmd + ` M ${x} ${y}`;
+    }
+    /**
+     * L = lineto
+     */
+    lineTo(bAbs, x, y) {
+        let cmd = this.command;
+        this.command = cmd + ` ${bAbs ? "L" : "l"} ${x} ${y}`;
+    }
+    /**
+    * H = horizontal lineto
+    */
+    hLineTo(bAbs, x) {
+        let cmd = this.command;
+        this.command = cmd + ` ${bAbs ? "H" : "h"} ${x}`;
+    }
+    /**
+    * V = vertical lineto
+    */
+    vLineTo(bAbs, y) {
+        let cmd = this.command;
+        this.command = cmd + ` ${bAbs ? "V" : "v"} ${y}`;
+    }
+    /**
+    * C = curveto
+    */
+    cubicCurveTo(bAbs, ax1, ay1, ax2, ay2, x, y) {
+        let cmd = this.command;
+        this.command = cmd + ` ${bAbs ? "C" : "c"} ${ax1} ${ay1} ${ax2} ${ay2} ${x} ${y}`;
+    }
+    /**
+    * S = smooth curveto
+    */
+    smoothCubicCurveTo(bAbs, ax1, ay1, ax2, ay2, x, y) {
+        let cmd = this.command;
+        this.command = cmd + ` ${bAbs ? "S" : "s"} ${x} ${y}`;
+    }
+    /**
+    * Q = quadratic Bézier curve
+    */
+    quadraticCurveTo(bAbs, ax, ay, x, y) {
+        let cmd = this.command;
+        this.command = cmd + ` ${bAbs ? "Q" : "q"} ${ax} ${ay} ${x} ${y}`;
+    }
+    /**
+    * T = smooth quadratic Bézier curveto
+    */
+    smoothQuadraticCurveTo(bAbs, ax, ay, x, y) {
+        let cmd = this.command;
+        this.command = cmd + ` ${bAbs ? "T" : "t"} ${ax} ${ay} ${x} ${y}`;
+    }
+    /**
+   * A = elliptical Arc
+   */
+    ellipticalArc(bAbs, x, y) {
+        let cmd = this.command;
+        this.command = cmd + ` ${bAbs ? "A" : "a"} ${x} ${y}`;
+    }
+    /*
+    * Z = closepath
+    */
+    closePath() {
+        let cmd = this.command;
+        this.command = cmd + " Z";
+    }
+}
+class GrPolygone extends GrElement {
+    constructor(gr, points) {
+        super(gr, "polygon", true);
+        this.lines = this.el;
+        this.setAttr("points", points.join(" "));
+    }
+}
+class GrRect extends GrElement {
+    constructor(gr, px, py, w, h, xRadius, yRadius) {
+        super(gr, "rect", true);
+        this.rect = this.el;
+        this.x = px;
+        this.y = py;
+        this.width = w;
+        this.height = h;
+        if (xRadius) {
+            this.rx = xRadius;
+            this.ry = xRadius;
+            if (yRadius) {
+                this.ry = yRadius;
+            }
+        }
+    }
+    get x() {
+        return this.rect.x.baseVal.value;
+    }
+    set x(value) {
+        this.rect.x.baseVal.value = value;
+    }
+    get y() {
+        return this.rect.y.baseVal.value;
+    }
+    set y(value) {
+        this.rect.y.baseVal.value = value;
+    }
+    get rx() {
+        return this.rect.rx.baseVal.value;
+    }
+    set rx(value) {
+        this.rect.rx.baseVal.value = value;
+    }
+    get ry() {
+        return this.rect.ry.baseVal.value;
+    }
+    set ry(value) {
+        this.rect.ry.baseVal.value = value;
+    }
+    get width() {
+        return this.rect.width.baseVal.value;
+    }
+    set width(value) {
+        this.rect.width.baseVal.value = value;
+    }
+    get height() {
+        return this.rect.width.baseVal.value;
+    }
+    set height(value) {
+        this.rect.width.baseVal.value = value;
+    }
+}
 /**
  * Commandes graphiques
  * associées à un DisplayObject (Sprite, Shape,...)
  * @author Jean-Marie PETIT
  */
 class Graphics {
-    constructor(e) {
-        this.el = e;
-        this._pos = new geom_1.Point(0, 0);
+    constructor(disp, el) {
+        this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        this.svg.style.pointerEvents = "none";
+        el.appendChild(this.svg);
+        this.svg.setAttribute("width", "100%");
+        this.svg.setAttribute("height", "100%");
+        this.clear();
     }
     clear() {
         this.fill = null;
         this.stroke = null;
         this.gradient = null;
-        this._pos = new geom_1.Point(0, 0);
+        while (this.svg.lastChild) {
+            this.svg.removeChild(this.svg.lastChild);
+        }
+        this.pos = new geom_1.Point(0, 0);
     }
     beginFill(color, alpha = 1.0) {
+        this.gradient = null;
         if (color != undefined) {
             this.fill = new Fill(color, alpha);
         }
@@ -179,25 +516,34 @@ class Graphics {
         }
     }
     beginGradientFill(type, colors, alphas, ratios, angle) {
+        this.fill = null;
         this.gradient = new Gradient(type, colors, alphas, ratios, angle);
     }
     drawCircle(x, y, radius) {
-        this._pos.setTo(x, y);
+        const draw = new GrCircle(this, x, y, radius);
     }
     drawEllipse(x, y, width, height) {
-        this._pos.setTo(x, y);
+        const draw = new GrEllipse(this, x, y, width, height);
+        this.pos.setTo(x, y);
+    }
+    drawPolygon(...num) {
+        const draw = new GrPolygone(this, num);
+        this.pos.setTo(num[num.length - 2], num[num.length - 1]);
     }
     drawRect(x, y, width, height) {
-        this._pos.setTo(x, y);
+        const draw = new GrRect(this, x, y, width, height);
     }
     drawRoundRect(x, y, width, height, xRadius, yRadius) {
-        this._pos.setTo(x, y);
+        const draw = new GrRect(this, x, y, width, height, xRadius, yRadius);
+        this.pos.setTo(x, y);
     }
     cubicCurveTo(ax1, ay1, ax2, ay2, x, y) {
-        this._pos.setTo(x, y);
+        const draw = new GrPath(this, false, ` M ${this.pos.x} ${this.pos.y}`);
+        draw.cubicCurveTo(true, ax1, ay1, ax2, ay2, x, y);
+        this.pos.setTo(x, y);
     }
     curveTo(ax, ay, x, y) {
-        this._pos.setTo(x, y);
+        this.pos.setTo(x, y);
     }
     endFill() {
     }
@@ -206,10 +552,11 @@ class Graphics {
             new Stroke(thickness, color, alpha) : null;
     }
     lineTo(x, y) {
-        this._pos.setTo(x, y);
+        const line = new GrLine(this, this.pos.x, this.pos.y, x, y);
+        this.pos.setTo(x, y);
     }
     moveTo(x, y) {
-        this._pos.setTo(x, y);
+        this.pos.setTo(x, y);
     }
 }
 exports.Graphics = Graphics;

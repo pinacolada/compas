@@ -4,7 +4,6 @@
     "module": "commonjs", 
     "sourceMap": true, 
     "removeComments": false,
-    "strict": true,
-    "moduleResolution": "node"
+    "strict": true //    "moduleResolution": "node"
   }
 }

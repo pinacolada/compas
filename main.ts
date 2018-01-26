@@ -5,7 +5,7 @@ let win:BrowserWindow;
 function createWindow ():void {
   win = new BrowserWindow({width: 1024, height: 600});
   win.loadURL(`file://${__dirname}/index.html`);
-  win.webContents.openDevTools();
+  // win.webContents.openDevTools();
 }
 
 app.on("window-all-closed", () => {

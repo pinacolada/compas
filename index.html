@@ -4,29 +4,15 @@
     <meta charset="UTF-8">
     <title>Comp_as V1.0</title>
 </head>
-<body>
-    <table id="viewMouse" style="border:1px solid blue">
-        <tr>
-            <td id="lbl1">target</td>
-            <td id="val1">
-                <input type="text" id="inId"></input>
-            </td>
-        </tr>
-        <tr>
-            <td id="lbl2">px</td>
-            <td id="val2">
-                <input type="text" id="inPx"></input>
-            </td>            
-        </tr>
-        <tr>
-            <td id="lbl3">py</td>
-            <td id="val3">
-                <input type="text" id="inPy"></input>
-            </td>            
-        </tr>
-    </table>  
-     <script>
-        require("./renderer");
-    </script>
+<body style="border:0; padding:0">
+    <table style="position:absolute;right:50px;bottom:90px;background-color:rgb(67, 134, 211); border:2px ridge white;" id="viewMouse">
+        <tr><td id="lblTarget">ID</td><td><input type="text" id="inId"></input></td></tr>
+        <tr><td id="lblX">MouseX</td><td><input type="text" id="x"></input></td></tr>
+        <tr><td id="lblPy">MouseY</td><td><input type="text" id="y"></input></td></tr>
+        <tr><td id="lblSx">StageX</td><td><input type="text" id="sx"></input></td></tr>
+        <tr><td id="lblSy">StageY</td><td><input type="text" id="sy"></input></td></tr>
+        <tr><td id="lblRect">Rect</td><td><input type="text" id="rect"></input></td></tr>
+    </table>
+    <script>require("./renderer");</script>
 </body>
 </html>

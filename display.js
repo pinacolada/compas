@@ -2,8 +2,24 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const geom_1 = require("./geom");
 const graph_1 = require("./graph");
-const find = (idEl, T) => document.getElementById(idEl);
+/**
+ * Renvoie un élément générique
+ * @param idEl identifiant de l'élément recherché
+ */
+const findEl = (idEl) => document.getElementById(idEl);
+/**
+ * Renvoie un élément de type Input
+ * @param idEl identifiant de l'élément recherché
+ */
+const findIn = (idEl) => document.getElementById(idEl);
+/**
+ * Crée un élément du type choisi
+ * @param type type de l'élément à créer
+ */
 const create = (type) => document.createElement(type);
+/*******************************************************************************************
+* L I S T E N E R
+********************************************************************************************/
 class Listener {
     constructor(target, type, callback) {
         this.target = target;
@@ -29,6 +45,9 @@ class Listener {
         this.target.listeners.splice(index, 1);
     }
 }
+/*******************************************************************************************
+* E V E N T  D I S P a T C H E R
+********************************************************************************************/
 /**
  * Diffuseur/écouteur d'événements générique
  * @author Jean-Marie PETIT
@@ -37,6 +56,22 @@ class EventDispatcher {
     constructor(element) {
         this.listeners = [];
         this.el = element;
+    }
+    /**
+     * Valeur numérique d'un attribut
+     * @param attrName Attribut dont on veut la valeur numérique
+     */
+    _getIntAttr(attrName) {
+        const attr = this.el.getAttribute(attrName);
+        return attr ? parseInt(attr) : 0;
+    }
+    /**
+     * Définit la valeur numérique d'un attribut
+     * @param attrName nom de l'attribut
+     * @param value valeur (entière) de l'attribut
+     */
+    _setIntAttr(attrName, value) {
+        this.el.setAttribute(attrName, value.toString());
     }
     addEventListener(type, callback) {
         if (this.listeners.some((l) => l.match(type, callback)))
@@ -58,6 +93,9 @@ class EventDispatcher {
         this.el.setAttribute(attrName, attrVal);
     }
 }
+/*******************************************************************************************
+*  D I S P L A Y  O B J E C T
+********************************************************************************************/
 /**
  * Objet affichable
  * @author Jean-Marie PETIT
@@ -70,8 +108,6 @@ class DisplayObject extends EventDispatcher {
         this.rect.style = this.css;
         this.back = new graph_1.Fill();
         this.border = new graph_1.Stroke();
-        this.borderStyle = "solid";
-        this.borderWidth = 1;
     }
     /**
      * Définit un arrière-plan en dégradé
@@ -156,7 +192,7 @@ class DisplayObject extends EventDispatcher {
         this.css.borderRadius = value + "px";
     }
     /**
-    * Style de la bordure
+    * inset|outset|solid|dotted|dashed|double|groove|ridge|none
     */
     get borderStyle() {
         return this.css.borderStyle;
@@ -184,6 +220,15 @@ class DisplayObject extends EventDispatcher {
         return parseInt(this.el.getAttribute("mouseY"));
     }
     /**
+     * Position de la souris à l'intérieur de l'objet
+     */
+    get stageX() {
+        return this.stage ? this.stage.mouseX : 0;
+    }
+    get stageY() {
+        return this.stage ? this.stage.mouseY : 0;
+    }
+    /**
      * Nom (id) de l'élément
      */
     get name() {
@@ -204,7 +249,10 @@ class DisplayObject extends EventDispatcher {
         return this.rect.x;
     }
     set x(value) {
-        this.rect.x = value;
+        if (this.rect.x != value) {
+            this.rect.x = value;
+            this.dispatchEvent(new Event("pos"));
+        }
     }
     /**
      * Haut du DisplayObject (dans son parent)
@@ -213,7 +261,10 @@ class DisplayObject extends EventDispatcher {
         return this.rect.y;
     }
     set y(value) {
-        this.rect.y = value;
+        if (this.rect.y != value) {
+            this.rect.y = value;
+            this.dispatchEvent(new Event("pos"));
+        }
     }
     /**
      * Largeur du DisplayBoject
@@ -222,7 +273,10 @@ class DisplayObject extends EventDispatcher {
         return this.rect.width;
     }
     set width(value) {
-        this.rect.width = value;
+        if (this.rect.width != value) {
+            this.rect.width = value;
+            this.dispatchEvent(new Event("size"));
+        }
     }
     /**
      * Hauteur du DisplayObject
@@ -231,10 +285,16 @@ class DisplayObject extends EventDispatcher {
         return this.rect.height;
     }
     set height(value) {
-        this.rect.height = value;
+        if (this.rect.height != value) {
+            this.rect.height = value;
+            this.dispatchEvent(new Event("size"));
+        }
     }
 }
 exports.DisplayObject = DisplayObject;
+/*******************************************************************************************
+*  I N T E R A C T I V E  O B J E C T
+********************************************************************************************/
 /**
  * Objet réactif
  * @author Jean-Marie PETIT
@@ -242,13 +302,29 @@ exports.DisplayObject = DisplayObject;
 class InteractiveObject extends DisplayObject {
     constructor(element) {
         super(element);
+        this.mouseEnabled = true;
     }
+    /**
+    * Définit l'ordre de tabulation
+    */
+    get tabIndex() {
+        return this._getIntAttr("tabIndex");
+    }
+    set tabIndex(value) {
+        this._setIntAttr("tabIndex", value);
+    }
+    /**
+     * Réagit à la souris ?
+     */
     get mouseEnabled() {
-        return this._mouseEnabled;
+        return this.css.pointerEvents !== "none";
     }
     set mouseEnabled(value) {
-        this._mouseEnabled = value;
+        this.css.pointerEvents = value ? "auto" : "none";
     }
+    /**
+     * Est dans une liste de tabulation ?
+     */
     get tabEnabled() {
         return this._tabEnabled;
     }
@@ -256,6 +332,9 @@ class InteractiveObject extends DisplayObject {
         this._tabEnabled = value;
     }
 }
+/*******************************************************************************************
+*  D I S P L A Y  O B J E C T  C O N T A I N E R
+********************************************************************************************/
 /**
  * Objet visuel pouvant contenir d'autres objets
  * @author Jean-Marie PETIT
@@ -321,36 +400,34 @@ class DisplayObjectContainer extends InteractiveObject {
     }
 }
 exports.DisplayObjectContainer = DisplayObjectContainer;
-/**
- * Elément visuel avec interface graphique
- * @author Jean-Marie PETIT
- */
-class Shape extends DisplayObject {
-    constructor() {
-        super(create("div"));
-        this.graphics = new graph_1.Graphics(this.el);
-    }
-}
-exports.Shape = Shape;
+/*******************************************************************************************
+*  S T A G E
+********************************************************************************************/
 /**
  * Élément d'arrière-plan de page (= document.body)
  */
 class Stage extends DisplayObjectContainer {
     constructor(w, h, color) {
         super(document.body);
+        this.css.position = "relative";
         this.name = "stage";
+        this.graphics = new graph_1.Graphics(this, this.el);
         this.addEventListener("mousemove", Stage.handleMouse);
         window.addEventListener("resize", (e) => Stage.handleSize(this, e));
         Stage.handleSize(this);
         this.backgroundColor = color;
+        this.width = w;
+        this.height = h;
     }
     get stage() {
         return this;
     }
     static handleSize(stage, e) {
         // Mémorise en attribut la taille de la scène (utilisée) 
-        stage.setAttr("stageWidth", window.innerWidth.toString());
-        stage.setAttr("stageHeight", window.innerHeight.toString());
+        stage._setIntAttr("stageWidth", window.innerWidth);
+        stage._setIntAttr("stageHeight", window.innerHeight);
+        stage.css.width = window.innerWidth + "px";
+        stage.css.height = window.innerHeight + "px";
     }
     static handleMouse(stage, e) {
         let hitEl = e.target;
@@ -361,26 +438,30 @@ class Stage extends DisplayObjectContainer {
         hitEl.setAttribute("mouseX", mx.toString());
         hitEl.setAttribute("mouseY", my.toString());
         // Mémorise sur la scène en attributs la position de la souris  
-        stage.setAttr("stageX", ecX.toString());
-        stage.setAttr("stageY", ecY.toString());
+        stage._setIntAttr("mouseX", ecX);
+        stage._setIntAttr("mouseY", ecY);
         // ---------- TODO : enlever en production ------------
         //             Affichage dans le document
         // ----------------------------------------------------
-        find("inId", HTMLInputElement).value = hitEl.id;
-        find("inPx", HTMLInputElement).value = mx.toString();
-        find("inPy", HTMLInputElement).value = my.toString();
+        findIn("inId").value = hitEl.id;
+        findIn("x").value = mx.toString();
+        findIn("y").value = my.toString();
+        findIn("sx").value = stage.stageX.toString();
+        findIn("sy").value = stage.stageY.toString();
+        const r = hitEl.getBoundingClientRect();
+        findIn("rect").value = `(x:${r.left},y:${r.top})-(W:${r.width}-H:${r.height})`;
     }
     /**
     * Position horizontale de la souris sur la scène
     */
     get stageX() {
-        return parseInt(this.el.getAttribute("stageX"));
+        return this.mouseX;
     }
     /**
     * Position verticale de la souris sur la scène
     */
     get stageY() {
-        return parseInt(this.el.getAttribute("stageY"));
+        return this.mouseY;
     }
     get stageWidth() {
         return parseInt(this.el.getAttribute("stageWidth"));
@@ -390,6 +471,23 @@ class Stage extends DisplayObjectContainer {
     }
 }
 exports.Stage = Stage;
+/*******************************************************************************************
+*  S H A P E
+********************************************************************************************/
+/**
+ * Elément visuel avec interface graphique
+ * @author Jean-Marie PETIT
+ */
+class Shape extends DisplayObject {
+    constructor() {
+        super(create("div"));
+        this.graphics = new graph_1.Graphics(this, this.el);
+    }
+}
+exports.Shape = Shape;
+/*******************************************************************************************
+*  S P R I T E
+********************************************************************************************/
 /**
  * Élément visuel interactif avec interface graphique
  * pouvant contenir d'autres éléments
@@ -398,29 +496,83 @@ exports.Stage = Stage;
 class Sprite extends DisplayObjectContainer {
     constructor() {
         super(create("div"));
-        this.graphics = new graph_1.Graphics(this.el);
+        this.graphics = new graph_1.Graphics(this, this.el);
     }
 }
 exports.Sprite = Sprite;
+/*******************************************************************************************
+*  T E X T  F O R M A T
+********************************************************************************************/
 class TextFormat {
     constructor(name = "times new roman", size = 12, color = 0x000000, bold = false, italic = false, underline = false, align = "left", marginLeft = 0, marginRight = 0, leading = 0, letterSpacing = 0) {
-        this.name = name;
-        this.size = size;
-        this.color = color;
-        this.bold = bold;
-        this.italic = italic;
-        this.underline = underline;
-        this.align = align;
-        this.marginLeft = marginLeft;
-        this.marginRight = marginRight;
-        this.leading = leading;
-        this.letterSpacing = letterSpacing;
+        this.span = create("span");
+        this.css = this.span.style;
+        this.fontName = name;
+        this.fontSize = size;
+        this.textColor = color;
+        this.textAlign = align;
+        this.mgLeft = marginLeft;
+        this.mgRight = marginRight;
     }
-    applyOn(style) {
-        this.css = style;
+    /**
+    * Police de caractère
+    */
+    get fontName() {
+        return this.css.fontFamily;
+    }
+    set fontName(value) {
+        this.css.fontFamily = value;
+    }
+    /**
+    * Taille de la police
+    */
+    get fontSize() {
+        return parseInt(this.css.fontSize);
+    }
+    set fontSize(value) {
+        this.css.fontSize = value + "pt";
+    }
+    /**
+    * Marge entre le texte et la bordure de droite
+    */
+    get mgLeft() {
+        return parseInt(this.css.paddingLeft);
+    }
+    set mgLeft(value) {
+        this.css.paddingLeft = value + "px";
+    }
+    /**
+    * Marge entre le texte et la bordure de droite
+    */
+    get mgRight() {
+        return parseInt(this.css.paddingRight);
+    }
+    set mgRight(value) {
+        this.css.paddingRight = value + "px";
+    }
+    /**
+    * Alignement du texte ( left | center | right | justify )
+    */
+    get textAlign() {
+        return this.css.textAlign;
+    }
+    set textAlign(value) {
+        this.css.textAlign = value;
+    }
+    /**
+    * Couleur du texte
+    */
+    get textColor() {
+        return graph_1.Color.hex(this.css.color ? this.css.color : "rgb(0,0,0)");
+    }
+    set textColor(value) {
+        this.css.color = graph_1.Color.rgb(value);
     }
 }
 exports.TextFormat = TextFormat;
+/*******************************************************************************************
+*  T E X T  F I E L D
+********************************************************************************************/
 /**
  * Élément visuel interactif avec interface graphique
  * pouvant contenir d'autres éléments
@@ -430,7 +582,16 @@ class TextField extends DisplayObject {
     constructor() {
         super(create("div"));
         this.format = new TextFormat();
-        this.format.applyOn(this.el.style);
+        this._span = this.format.span;
+        this.el.appendChild(this._span);
+        this._span.style.width = "100%";
+        this._span.style.height = "100%";
+    }
+    get text() {
+        return this._span.textContent || "";
+    }
+    set text(value) {
+        this._span.textContent = value;
     }
 }
 exports.TextField = TextField;

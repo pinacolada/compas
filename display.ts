@@ -1,9 +1,25 @@
 import { BrowserWindow, app, remote} from "electron";
 import { Point, Rectangle, Filter, Matrix } from "./geom";
-import { Graphics, Fill, Stroke, Gradient, GradientStop } from "./graph";
+import { Graphics, Fill, Stroke, Gradient, GradientStop, Color } from "./graph";
+/**
+ * Renvoie un élément générique
+ * @param idEl identifiant de l'élément recherché
+ */
+const findEl = (idEl: string) => <HTMLElement>document.getElementById(idEl);
+/**
+ * Renvoie un élément de type Input
+ * @param idEl identifiant de l'élément recherché 
+ */
+const findIn = (idEl: string) => <HTMLInputElement>document.getElementById(idEl);
+/**
+ * Crée un élément du type choisi
+ * @param type type de l'élément à créer
+ */
+const create = (type: string) => document.createElement(type);
 
-const find = (idEl:string, T) => document.getElementById(idEl) as T;
-const create = (type:string)=> document.createElement(type);
+/*******************************************************************************************
+* L I S T E N E R
+********************************************************************************************/
 
 class Listener {
     public target:EventDispatcher;
@@ -37,18 +53,37 @@ class Listener {
     }
 }
 
+
+/*******************************************************************************************
+* E V E N T  D I S P a T C H E R
+********************************************************************************************/
+
 /**
  * Diffuseur/écouteur d'événements générique
  * @author Jean-Marie PETIT
  */
 class EventDispatcher {
-    listeners: Listener[];
+    listeners: Listener[] = [];
     el: HTMLElement;
     constructor(element:HTMLElement) {
-        this.listeners = [];
         this.el = element;
     }
-
+    /**
+     * Valeur numérique d'un attribut
+     * @param attrName Attribut dont on veut la valeur numérique
+     */
+    _getIntAttr(attrName: string): number {
+        const attr = this.el.getAttribute(attrName);
+        return attr ? parseInt(attr) : 0;
+    }
+    /**
+     * Définit la valeur numérique d'un attribut
+     * @param attrName nom de l'attribut
+     * @param value valeur (entière) de l'attribut
+     */
+    _setIntAttr(attrName: string, value:number):void {
+        this.el.setAttribute(attrName, value.toString());
+    }
     addEventListener(type: string, callback: Function): void {
         if (this.listeners.some((l: Listener) => l.match(type, callback))) return;
         this.listeners.push(new Listener(this, type, callback));
@@ -70,6 +105,10 @@ class EventDispatcher {
         this.el.setAttribute(attrName, attrVal);
     }
 }
+
+/*******************************************************************************************
+*  D I S P L A Y  O B J E C T
+********************************************************************************************/
 
 /**
  * Objet affichable
@@ -93,16 +132,13 @@ export class DisplayObject extends EventDispatcher {
     scrollRect: Rectangle;
     */
     parent: DisplayObjectContainer | null;
-    el: HTMLElement;
     constructor( element:HTMLElement) {
         super(element);
-        this.css = this.el.style
+        this.css = this.el.style;
         this.rect = new Rectangle();
         this.rect.style = this.css;
         this.back = new Fill();
         this.border = new Stroke(); 
-        this.borderStyle = "solid";
-        this.borderWidth = 1;
     }
     /**
      * Définit un arrière-plan en dégradé   
@@ -112,11 +148,13 @@ export class DisplayObject extends EventDispatcher {
      * @param ratios positions des couleurs entre 0 et 255
      * @param angle orientation du dégradé en degrés 
      */
-    gradientBackground(colors:number[],alphas:number[],ratios:number[],angle:number): DisplayObject {
+    gradientBackground(colors: number[],
+        alphas: number[],
+        ratios: number[],
+        angle: number): DisplayObject {
         this.css.background = new Gradient("linear", colors, alphas, ratios, angle).css;
         return this;
     }
-
     /**
      * Définit la position et la taille du DisplayObject
      * @param px position horizontale
@@ -128,7 +166,6 @@ export class DisplayObject extends EventDispatcher {
         this.rect.setTo(px, py, w, h);
         return this;
     }
-
     /**
      * Transparence générale (opacité)
      */
@@ -189,7 +226,7 @@ export class DisplayObject extends EventDispatcher {
         this.css.borderRadius = value+"px";
     }
     /**
-    * Style de la bordure
+    * inset|outset|solid|dotted|dashed|double|groove|ridge|none
     */
     get borderStyle():string {
         return <string>this.css.borderStyle;
@@ -207,7 +244,6 @@ export class DisplayObject extends EventDispatcher {
         this.border.thickness = value;
         this.css.borderWidth = this.border.thickness+"px";
     }
-
     /**
      * Position de la souris à l'intérieur de l'objet
      */
@@ -216,6 +252,15 @@ export class DisplayObject extends EventDispatcher {
     }
     get mouseY(): number {
         return parseInt(<string>this.el.getAttribute("mouseY"));
+    }
+    /**
+     * Position de la souris à l'intérieur de l'objet
+     */
+    get stageX(): number {
+        return this.stage ? this.stage.mouseX : 0;
+    }
+    get stageY(): number {
+        return this.stage ? this.stage.mouseY : 0;
     }
     /**
      * Nom (id) de l'élément 
@@ -237,7 +282,10 @@ export class DisplayObject extends EventDispatcher {
         return this.rect.x;
     }
     set x(value: number) {
-        this.rect.x = value;
+        if (this.rect.x != value) {
+            this.rect.x = value;
+            this.dispatchEvent(new Event("pos"));
+        }
     }
     /**
      * Haut du DisplayObject (dans son parent)
@@ -246,7 +294,10 @@ export class DisplayObject extends EventDispatcher {
         return this.rect.y;
     }
     set y(value: number) {
-        this.rect.y = value;
+        if (this.rect.y != value) {
+            this.rect.y = value;
+            this.dispatchEvent(new Event("pos"));
+        }
     }
     /**
      * Largeur du DisplayBoject
@@ -255,7 +306,10 @@ export class DisplayObject extends EventDispatcher {
         return this.rect.width;
     }
     set width(value: number) {
-        this.rect.width = value;
+        if (this.rect.width != value) {
+            this.rect.width = value;
+            this.dispatchEvent(new Event("size"));
+        }
     }
     /**
      * Hauteur du DisplayObject
@@ -264,39 +318,58 @@ export class DisplayObject extends EventDispatcher {
         return this.rect.height;
     }
     set height(value: number) {
-        this.rect.height = value;
+        if (this.rect.height != value) {
+            this.rect.height = value;
+            this.dispatchEvent(new Event("size"));
+        }
     }
 }
 
+/*******************************************************************************************
+*  I N T E R A C T I V E  O B J E C T
+********************************************************************************************/
 /**
  * Objet réactif
  * @author Jean-Marie PETIT
  */
 class InteractiveObject extends DisplayObject {
-    _mouseEnabled: boolean;
     _tabEnabled: boolean;
-    tabIndex: number;
-
     constructor(element:HTMLElement) {
         super(element);
+        this.mouseEnabled = true;
     }
-
+    /**
+    * Définit l'ordre de tabulation
+    */
+    get tabIndex(): number {
+        return this._getIntAttr("tabIndex");
+    }
+    set tabIndex(value:number) {
+      this._setIntAttr("tabIndex", value);
+    }
+    /**
+     * Réagit à la souris ?
+     */
     get mouseEnabled(): boolean {
-        return this._mouseEnabled;
+        return this.css.pointerEvents !== "none";
     }
-
     set mouseEnabled(value: boolean) {
-        this._mouseEnabled = value;
+        this.css.pointerEvents = value ? "auto" :"none";
     }
-
+    /**
+     * Est dans une liste de tabulation ?
+     */
     get tabEnabled(): boolean {
         return this._tabEnabled;
     }
-
     set tabEnabled(value: boolean) {
         this._tabEnabled = value;
     }
 }
+
+/*******************************************************************************************
+*  D I S P L A Y  O B J E C T  C O N T A I N E R
+********************************************************************************************/
 
 /**
  * Objet visuel pouvant contenir d'autres objets
@@ -369,17 +442,10 @@ export class DisplayObjectContainer extends InteractiveObject {
     }
 }
 
-/**
- * Elément visuel avec interface graphique
- * @author Jean-Marie PETIT
- */
-export class Shape extends DisplayObject {
-    graphics: Graphics;
-    constructor() {
-        super(create("div"));
-        this.graphics = new Graphics(this.el);
-    }
-}
+/*******************************************************************************************
+*  S T A G E
+********************************************************************************************/
+
 /**
  * Élément d'arrière-plan de page (= document.body)
  */
@@ -388,15 +454,20 @@ export class Stage extends DisplayObjectContainer {
      * Élement en cours (survolé par la souris)
      */
     hitElement: HTMLElement;
+    graphics: Graphics;
     constructor(w:number, h:number, color:number) {
         super(document.body);
+        this.css.position = "relative";
         this.name = "stage";
+        this.graphics = new Graphics(this, this.el);
         this.addEventListener("mousemove", Stage.handleMouse);
         window.addEventListener("resize", (e: UIEvent) => Stage.handleSize(this, e));
         Stage.handleSize(this);
-        
-        
         this.backgroundColor = color;
+
+        this.width = w;
+        this.height = h;
+
     }
 
     get stage(): Stage {
@@ -405,8 +476,10 @@ export class Stage extends DisplayObjectContainer {
 
     public static handleSize(stage:Stage, e?:UIEvent) {
         // Mémorise en attribut la taille de la scène (utilisée) 
-        stage.setAttr("stageWidth", window.innerWidth.toString());
-        stage.setAttr("stageHeight", window.innerHeight.toString());
+        stage._setIntAttr("stageWidth", window.innerWidth);
+        stage._setIntAttr("stageHeight", window.innerHeight);
+        stage.css.width = window.innerWidth + "px";
+        stage.css.height = window.innerHeight + "px";
     }
 
     public static handleMouse(stage: Stage, e: MouseEvent) {
@@ -420,27 +493,31 @@ export class Stage extends DisplayObjectContainer {
         hitEl.setAttribute("mouseY", my.toString());
 
         // Mémorise sur la scène en attributs la position de la souris  
-        stage.setAttr("stageX", ecX.toString());
-        stage.setAttr("stageY", ecY.toString());
+        stage._setIntAttr("mouseX", ecX);
+        stage._setIntAttr("mouseY", ecY);
 
         // ---------- TODO : enlever en production ------------
         //             Affichage dans le document
         // ----------------------------------------------------
-        find("inId", HTMLInputElement).value = hitEl.id;
-        find("inPx", HTMLInputElement).value = mx.toString();
-        find("inPy", HTMLInputElement).value = my.toString(); 
+        findIn("inId").value = hitEl.id;
+        findIn("x").value = mx.toString();
+        findIn("y").value = my.toString(); 
+        findIn("sx").value = stage.stageX.toString();
+        findIn("sy").value = stage.stageY.toString();
+        const r =  hitEl.getBoundingClientRect()
+        findIn("rect").value = `(x:${r.left},y:${r.top})-(W:${r.width}-H:${r.height})`;
     }
     /**
     * Position horizontale de la souris sur la scène
     */
     get stageX(): number {
-        return parseInt(this.el.getAttribute("stageX") as string);
+        return this.mouseX;
     }
     /**
     * Position verticale de la souris sur la scène
     */
     get stageY(): number {
-        return parseInt(this.el.getAttribute("stageY") as string);
+        return this.mouseY;
     }
 
     get stageWidth(): number {
@@ -452,6 +529,26 @@ export class Stage extends DisplayObjectContainer {
     }
 }
 
+/*******************************************************************************************
+*  S H A P E
+********************************************************************************************/
+
+/**
+ * Elément visuel avec interface graphique
+ * @author Jean-Marie PETIT
+ */
+export class Shape extends DisplayObject {
+    graphics: Graphics;
+    constructor() {
+        super(create("div"));
+        this.graphics = new Graphics(this, this.el);
+    }
+}
+
+/*******************************************************************************************
+*  S P R I T E
+********************************************************************************************/
+
 /**
  * Élément visuel interactif avec interface graphique
  * pouvant contenir d'autres éléments
@@ -461,30 +558,101 @@ export class Sprite extends DisplayObjectContainer {
     graphics: Graphics;
     constructor() {
         super(create("div"));
-        this.graphics = new Graphics(this.el);
+        this.graphics = new Graphics(this, this.el);
     }
 }
+
+/*******************************************************************************************
+*  T E X T  F O R M A T
+********************************************************************************************/
 
 export class TextFormat {
     css: CSSStyleDeclaration;
-
-    constructor(public name:string="times new roman",
-        public size: number=12,
-        public color: number=0x000000,
-        public bold: boolean=false,
-        public italic: boolean=false,
-        public underline: boolean=false,
-        public align: string="left",
-        public marginLeft: number=0,
-        public marginRight: number = 0,
-        public leading: number = 0,
-        public letterSpacing: number = 0) {
+    span: HTMLSpanElement;
+    constructor(name:string="times new roman",
+        size: number=12,
+        color: number=0x000000,
+        bold: boolean=false,
+        italic: boolean=false,
+        underline: boolean=false,
+        align: string="left",
+        marginLeft: number=0,
+        marginRight: number = 0,
+        leading: number = 0,
+        letterSpacing: number = 0) {
+        this.span = create("span");
+        this.css = this.span.style;
         
+        this.fontName = name;
+        this.fontSize = size;
+        this.textColor = color;
+        this.textAlign = align;
+        this.mgLeft = marginLeft; 
+        this.mgRight = marginRight;
+
+
     }
-    applyOn(style:CSSStyleDeclaration) {
-        this.css = style;
+    /**
+    * Police de caractère
+    */
+    get fontName() {
+        return this.css.fontFamily;
     }
+    set fontName(value) {
+       this.css.fontFamily = value;
+    }
+    /**
+    * Taille de la police
+    */
+    get fontSize() {
+        return parseInt(<string>this.css.fontSize);
+    }
+    set fontSize(value) {
+        this.css.fontSize = value + "pt";
+    }
+    /**
+    * Marge entre le texte et la bordure de droite
+    */
+    get mgLeft():number {
+        return parseInt(<string>this.css.paddingLeft);
+    }
+    set mgLeft(value:number) {
+        this.css.paddingLeft = value + "px";
+    }
+    /**
+    * Marge entre le texte et la bordure de droite
+    */
+    get mgRight():number {
+        return parseInt(<string>this.css.paddingRight);
+    }
+    set mgRight(value:number) {
+        this.css.paddingRight = value + "px";
+    }
+    /**
+    * Alignement du texte ( left | center | right | justify )
+    */
+    get textAlign() {
+        return this.css.textAlign;
+    }
+    set textAlign(value) {
+        this.css.textAlign = value;
+    }
+    /**
+    * Couleur du texte
+    */
+    get textColor():number {
+        return Color.hex(this.css.color ? this.css.color : "rgb(0,0,0)");
+    }
+    set textColor(value:number) {
+        this.css.color = Color.rgb(value);
+    }
+
 }
+
+/*******************************************************************************************
+*  T E X T  F I E L D
+********************************************************************************************/
+
 /**
  * Élément visuel interactif avec interface graphique
  * pouvant contenir d'autres éléments
@@ -493,9 +661,19 @@ export class TextFormat {
 export class TextField extends DisplayObject {
     graphics: Graphics;
     format: TextFormat;
+    private _span: HTMLSpanElement;
     constructor() {
         super(create("div"));
         this.format = new TextFormat();
-        this.format.applyOn(this.el.style);
+        this._span = this.format.span;
+        this.el.appendChild(this._span);
+        this._span.style.width = "100%";
+        this._span.style.height = "100%";
+    }
+    get text(): string {
+        return this._span.textContent || "";
+    }
+    set text(value: string) {
+        this._span.textContent = value;
     }
 }

@@ -25,6 +25,9 @@ class Point {
     set top(value) {
         this.y = value;
     }
+    clone() {
+        return new Point(this.x, this.y);
+    }
 }
 exports.Point = Point;
 /**
@@ -57,6 +60,9 @@ class Rectangle {
         this.css = value;
         this.css.position = "absolute";
         this.css.boxSizing = "border-box";
+        this.css.overflow = "hidden";
+        this.css.margin = "0";
+        this.css.padding = "0";
     }
     get left() {
         return this.x;
@@ -115,6 +121,12 @@ class Rectangle {
     }
     set height(value) {
         this.css.height = value + "px";
+    }
+    toString() {
+        return `(x:${this.x},y:${this.y})-(${this.width} x ${this.height})`;
+    }
+    clone() {
+        return new Rectangle(this.x, this.y, this.width, this.height);
     }
 }
 exports.Rectangle = Rectangle;

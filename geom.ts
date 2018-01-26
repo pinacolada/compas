@@ -1,4 +1,5 @@
 import { Graphics } from "./graph";
+import { DisplayObject } from "./display";
 
 /**
  * Position
@@ -23,6 +24,9 @@ export class Point {
     set top(value: number) {
         this.y = value;
     }
+    clone(): Point {
+        return new Point(this.x, this.y);
+    }
 }
 
 /**
@@ -31,7 +35,7 @@ export class Point {
  */
 export class Rectangle {
     css: CSSStyleDeclaration;
-
+    disp: DisplayObject;
     constructor(px:number = 0, py: number = 0, w: number = 0, h: number = 0) {
         this.setTo(px, py, w, h);
     }
@@ -56,6 +60,9 @@ export class Rectangle {
         this.css = value;
         this.css.position = "absolute";
         this.css.boxSizing = "border-box";
+        this.css.overflow = "hidden";
+        this.css.margin = "0";
+        this.css.padding = "0";
     }
     get left(): number {
         return this.x;
@@ -114,6 +121,12 @@ export class Rectangle {
     }
     set height(value: number) {
         this.css.height = value + "px";
+    }
+    toString():string {
+        return `(x:${this.x},y:${this.y})-(${this.width} x ${this.height})`;
+    }
+    clone(): Rectangle {
+        return new Rectangle(this.x, this.y, this.width, this.height);
     }
 }
 

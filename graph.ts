@@ -40,8 +40,13 @@ export class Fill {
      * @param c couleur entre 0x000000 et 0xFFFFFF
      * @param a transparence entre 0.0 (transparent) et 1.0 (opaque)
      */
-    constructor(c: number=0xFFFFFF, a: number=1.0) {
+    constructor(c: number = 0xFFFFFF, a: number = 1.0) {
         this.val = [c, a, 0];
+    }
+
+    setTo(c: number=0xFFFFFF, a: number=1.0): Fill {
+        this.val = [c, a, 0];
+        return this;
     }
     /**
     * Couleur entre 0x000000 et 0xFFFFFF
@@ -94,6 +99,12 @@ export class Stroke extends Fill {
     constructor(t: number = 1.0, c: number = 0x000000, a: number = 1.0) {
         super(c, a);
         this.thickness = t;
+    }
+    setTo(t: number = 1.0, c: number = 0x000000, a: number = 1.0): Stroke {
+        this.color = c;
+        this.alpha = a;
+        this.thickness = t;
+        return this;
     }
     /**
     * épaisseur du trait

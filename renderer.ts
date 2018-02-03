@@ -1,16 +1,13 @@
-// Description du projet
-// 
-// 
-// --------------------------------------------
-import {DisplayObjectContainer, DisplayObject, Stage, Sprite, Shape, TextField, TextFormat } from "./display";
+import {DisplayObjectContainer, DisplayObject, Stage, Sprite, Shape, TextField, TextFormat, findIn } from "./display";
+import { Button, DisplayGrid } from "./ui";
 
 let stage: Stage = new Stage(1024, 600, 0x9999FF);
 var carre: Sprite = new Sprite();
 carre.name = "carré";
 stage.addChild(carre);
 carre.setRect(150, 50, 250, 250);
-carre.backgroundColor = 0x00CC00;
-carre.backgroundAlpha = 0.5;
+carre.setBackground(0x00CC00, 0.5);
+
 const gr = carre.graphics;
 gr.moveTo(carre.width, 0);
 gr.lineStyle(2, 0x000000, 1);
@@ -45,17 +42,6 @@ stage.graphics.beginFill(0xCC9966, 1);
 stage.graphics.drawPolygon(100, 10, 40, 198, 190, 78, 10, 78, 160, 198);
 
 
-var btn: TextField = new TextField();
-btn.name = "bouton";
-stage.addChild(btn);
-btn.setRect(50, 350, 140, 40);
-btn.y = 350;
-btn.gradientBackground([0xFFFFFF, 0x099CC, 0x333333], [1, 1, 1], [0, 64, 255], 180);
-btn.borderRadius = 12;
-btn.format.textAlign = "center";
-btn.format.textColor = 0xFF0000;
-
-btn.text = "TextField";
 
 stage.graphics.lineStyle(1, 0x666699, 0.5);
 for (let i = 0; i < stage.width; i += 50) {
@@ -68,4 +54,79 @@ for (let j = 0; j < stage.height; j += 50) {
     stage.graphics.lineTo(stage.width, j);
 }
 
-console.log("Dessin terminé.");
+const btn:Button = new Button("btn", 735, 522, 200, 40, 0x666666, "Créer un élément", 2);
+btn.addEventListener("click", createElement);
+stage.addChild(btn);
+
+let currentSprite: Sprite | null;
+const fram: Sprite = new Sprite();
+fram.setBorder(1, 0xFF0000, 0.6, "dotted");
+
+const grid: DisplayGrid = new DisplayGrid();
+var numCurrent = 1;
+
+stage.el.addEventListener("keydown", (e: KeyboardEvent) => {
+    console.log(e);
+    if (currentSprite == null) return;
+    if (e.key === "Delete") {
+        currentSprite.removeChild(grid);
+        stage.removeChild(currentSprite);
+        currentSprite = null;
+    } else if (e.key === "ArrowUp") {
+        e.shiftKey ? currentSprite.height-- : currentSprite.y--;    
+    } else if (e.key === "ArrowDown") {
+        e.shiftKey ? currentSprite.height ++ : currentSprite.y++;
+    } else if (e.key === "ArrowLeft") {
+        e.shiftKey? currentSprite.width -- : currentSprite.x--;    
+    } else if (e.key === "ArrowRight") {
+        e.shiftKey? currentSprite.width++ : currentSprite.x++;
+    }
+    if(currentSprite) grid.ajustTo(currentSprite);
+});
+
+function createElement(d: DisplayObject, e: MouseEvent) {
+    if (stage.cursor != "default") return;
+    stage.cursor = "crosshair ";
+    stage.el.addEventListener("mousedown", startDrag);
+
+    function startDrag(e:MouseEvent) {
+        if (stage.cursor != "crosshair") return;
+        stage.cursor = "se-resize";
+        stage.el.removeEventListener("mousedown", startDrag);
+        stage.el.addEventListener("mouseup", endDrag);
+        stage.el.addEventListener("mousemove", drag);
+        fram.setRect(e.clientX, e.clientY, 0, 0);
+        stage.addChild(fram);
+    }
+    function drag(e: MouseEvent) {
+        if (stage.cursor != "se-resize") return;   
+        fram.width = e.clientX - fram.x;
+        fram.height = e.clientY - fram.y;
+    } 
+    function endDrag(e: MouseEvent) {
+        if (stage.cursor != "se-resize") return; 
+        if (fram.width == 0 && fram.height == 0) return; 
+        stage.el.removeEventListener("mouseup", endDrag);
+        stage.el.removeEventListener("mousemove", drag);
+        if (fram.rect.width > 0 && fram.rect.height > 0) {
+            let el = new Sprite();
+            el.name = "item_" + numCurrent++;
+            el.setRectAs(fram.rect);
+            el.setBackground(0xFFFFFF, 1.0);
+            el.setBorder(1, 0x000000, 1.0, "solid");
+            stage.addChild(el);    
+            setCurrentSprite(el);
+            el.addEventListener("mousedown", () => setCurrentSprite(el));
+        }
+        stage.removeChild(fram);
+        stage.cursor = "default";
+    }
+}
+
+function setCurrentSprite(el: Sprite) {
+    currentSprite = el;
+    if (currentSprite) {
+        currentSprite.addChild(grid);
+        grid.ajustTo(currentSprite);
+    }
+}

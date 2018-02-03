@@ -1,16 +1,16 @@
-import { BrowserWindow, app, remote} from "electron";
-import { Point, Rectangle, Filter, Matrix } from "./geom";
-import { Graphics, Fill, Stroke, Gradient, GradientStop, Color } from "./graph";
+import { Point, Rectangle, Matrix, Filter } from "./geom";
+import { Fill, Stroke, Gradient, Graphics, Color } from "./graph";
+
 /**
  * Renvoie un élément générique
  * @param idEl identifiant de l'élément recherché
  */
-const findEl = (idEl: string) => <HTMLElement>document.getElementById(idEl);
+export const findEl = (idEl: string) => <HTMLElement>document.getElementById(idEl);
 /**
  * Renvoie un élément de type Input
  * @param idEl identifiant de l'élément recherché 
  */
-const findIn = (idEl: string) => <HTMLInputElement>document.getElementById(idEl);
+export const findIn = (idEl: string) => <HTMLInputElement>document.getElementById(idEl);
 /**
  * Crée un élément du type choisi
  * @param type type de l'élément à créer
@@ -33,7 +33,7 @@ class Listener {
         this.start();
     }
     handleEvent(e: Event) {
-        this.callback(e);
+        this.callback.call(this.target, e);
     }
     start(): void {
         this.target.el.addEventListener(this.type, (e)=> this.callback(this.target, e));
@@ -43,13 +43,12 @@ class Listener {
     }
     public match(type:String, callback:Function):boolean {
         return this.type === type && this.callback === callback;
-    }
-            
+    }       
     public remove():void 
     {
         this.stop();
-        let index = this.target.listeners.indexOf(this);
-        this.target.listeners.splice(index, 1);   
+        const l = this.target.listeners;
+        l.splice(l.indexOf(this), 1);   
     }
 }
 
@@ -95,11 +94,10 @@ class EventDispatcher {
     }
     removeEventListener(type: string, callback: Function): void {
         var existe = this.listeners.find((l: Listener) => l.match(type, callback));
-        if (existe != undefined) existe.remove();
+        if (existe != undefined) existe.stop();
     }
-
     removeAllListeners(): void {
-        this.listeners.forEach((item: Listener) => item.remove());
+        this.listeners.forEach((item: Listener) => item.stop());
     }
     setAttr(attrName: string, attrVal: string): void {
         this.el.setAttribute(attrName, attrVal);
@@ -109,7 +107,6 @@ class EventDispatcher {
 /*******************************************************************************************
 *  D I S P L A Y  O B J E C T
 ********************************************************************************************/
-
 /**
  * Objet affichable
  * @author Jean-Marie PETIT
@@ -132,6 +129,7 @@ export class DisplayObject extends EventDispatcher {
     scrollRect: Rectangle;
     */
     parent: DisplayObjectContainer | null;
+    _stage: Stage | null
     constructor( element:HTMLElement) {
         super(element);
         this.css = this.el.style;
@@ -140,6 +138,7 @@ export class DisplayObject extends EventDispatcher {
         this.back = new Fill();
         this.border = new Stroke(); 
     }
+
     /**
      * Définit un arrière-plan en dégradé   
      * @param type type du dégradé ("linear"|"radial")
@@ -156,6 +155,30 @@ export class DisplayObject extends EventDispatcher {
         return this;
     }
     /**
+     * Définit la couleur et la transparence du fond
+     * @param c couleur (0x000000 -> 0xFFFFFF)
+     * @param a alpha (0.0 -> 1.0)
+     */
+    setBackground(c:number, a:number): DisplayObject {
+        this.backgroundColor = c;
+        this.backgroundAlpha = a;
+        return this;
+    }
+    setBorder(t:number, c:number, a:number, styl:string): DisplayObject {
+        this.borderColor = c;
+        this.borderAlpha = a;
+        this.borderWidth = t;
+        this.borderStyle = styl;
+        return this;
+    }
+    /**
+     * Définit la luminosité appliquée sur le DisplayObject
+     * @param percent nombre entier (50 = 50% | 120 = 120%...)
+     */
+    setLigth(percent: number) {
+        this.css.filter = "brightness(" + percent + "%)";
+    }
+    /**
      * Définit la position et la taille du DisplayObject
      * @param px position horizontale
      * @param py position verticale
@@ -164,6 +187,11 @@ export class DisplayObject extends EventDispatcher {
      */
     setRect(px: number, py: number, w: number, h: number): DisplayObject {
         this.rect.setTo(px, py, w, h);
+        return this;
+    }
+
+    setRectAs(r: Rectangle): DisplayObject {
+        this.rect.setTo(r.x, r.y, r.width, r.height);
         return this;
     }
     /**
@@ -220,7 +248,7 @@ export class DisplayObject extends EventDispatcher {
     * Couleur de bordure
     */
     get borderRadius():number {
-        return parseInt(<string>this.css.borderRadius);
+        return parseInt(this.css.borderRadius || "0");
     }
     set borderRadius(value:number) {
         this.css.borderRadius = value+"px";
@@ -229,7 +257,7 @@ export class DisplayObject extends EventDispatcher {
     * inset|outset|solid|dotted|dashed|double|groove|ridge|none
     */
     get borderStyle():string {
-        return <string>this.css.borderStyle;
+        return this.css.borderStyle || "none";
     }
     set borderStyle(value:string) {
         this.css.borderStyle = value;
@@ -245,6 +273,15 @@ export class DisplayObject extends EventDispatcher {
         this.css.borderWidth = this.border.thickness+"px";
     }
     /**
+    * Curseur à utiliser
+    */
+    get cursor():string {
+      return this.css.cursor || "default";
+    }
+    set cursor(value:string) {
+      this.css.cursor = value;
+    }
+    /**
      * Position de la souris à l'intérieur de l'objet
      */
     get mouseX(): number {
@@ -252,6 +289,9 @@ export class DisplayObject extends EventDispatcher {
     }
     get mouseY(): number {
         return parseInt(<string>this.el.getAttribute("mouseY"));
+    }
+    get stage(): Stage | null {
+        return this.parent ? this.parent.stage : null;
     }
     /**
      * Position de la souris à l'intérieur de l'objet
@@ -270,10 +310,6 @@ export class DisplayObject extends EventDispatcher {
     }
     set name(value: string) {
         this.setAttr("id", value);
-    }
-    get stage():Stage|null {
-        if (this.parent == null) return null;
-        return this.parent.stage;
     }
     /**
      * Gauche du DisplayObject (dans son parent)
@@ -388,7 +424,7 @@ export class DisplayObjectContainer extends InteractiveObject {
         }
         this.children.push(child);
         this.el.appendChild(child.el);
-        child.parent = this;
+        child.parent = this; 
         return child;
     }
 
@@ -464,7 +500,8 @@ export class Stage extends DisplayObjectContainer {
         window.addEventListener("resize", (e: UIEvent) => Stage.handleSize(this, e));
         Stage.handleSize(this);
         this.backgroundColor = color;
-
+        this.parent = this;
+        this._stage = this;
         this.width = w;
         this.height = h;
 
@@ -567,86 +604,145 @@ export class Sprite extends DisplayObjectContainer {
 ********************************************************************************************/
 
 export class TextFormat {
-    css: CSSStyleDeclaration;
-    span: HTMLSpanElement;
-    constructor(name:string="times new roman",
-        size: number=12,
-        color: number=0x000000,
-        bold: boolean=false,
-        italic: boolean=false,
-        underline: boolean=false,
-        align: string="left",
-        marginLeft: number=0,
-        marginRight: number = 0,
-        leading: number = 0,
-        letterSpacing: number = 0) {
-        this.span = create("span");
-        this.css = this.span.style;
-        
-        this.fontName = name;
-        this.fontSize = size;
-        this.textColor = color;
-        this.textAlign = align;
-        this.mgLeft = marginLeft; 
-        this.mgRight = marginRight;
-
-
-    }
+    private vals: (string | number | boolean)[] = [];
+    private css: CSSStyleDeclaration;
     /**
-    * Police de caractère
-    */
-    get fontName() {
-        return this.css.fontFamily;
+     * Formatage d'un TextField : texte entier / partie de texte
+     * @param fontName Nom de la police
+     * @param fontSize couleur du texte
+     * @param textColor taille de la police
+     * @param isBold en gras ?
+     * @param isItal en italiques ?
+     * @param isUnderline souligner ?
+     * @param textAlign aligner [gauche:left|centre:center|droite:right|justifié:justify]
+     * @param mgLeft indentation à gauche
+     * @param mgRight indentation à droite 
+     * @param leadingSpace espace entre les lignes
+     * @param charSpacing espace entre les caractères
+     */
+    constructor(fontName: string="times new roman",
+        fontSize: number = 12,
+        textColor: number = 0x000000,
+        isBold: boolean = false,
+        isItal: boolean = false,
+        isUnderline: boolean = false,
+        textAlign: string = "left",
+        mgLeft: number = 0,
+        mgRight: number = 0,
+        leadingSpace: number = 0,
+        charSpacing:number = 0
+    ) { 
+        this.name = fontName;
+        this.size = fontSize;
+        this.color = textColor;
+        this.bold = isBold;
+        this.italic = isItal;
+        this.underline = isUnderline;
+        this.align = textAlign;
+        this.marginLeft = mgLeft;
+        this.marginRight = mgRight;
+        this.leading = leadingSpace;
+        this.letterSpacing = charSpacing;
     }
-    set fontName(value) {
-       this.css.fontFamily = value;
+    applyOn(css: CSSStyleDeclaration) {
+        this.css = css;
+        this.css.fontFamily = this.name;
+        this.css.fontSize = this.size + "pt";
+        this.css.color = Color.rgb(this.color);
+        this.css.fontWeight = this.bold ? "bold" : "";
+        this.css.fontStyle = this.italic ? "italic" : "";
+        this.css.textDecoration = this.underline ? "underline" : "";
+        this.css.textAlign = this.align;
+        this.css.paddingLeft = this.marginLeft + "px";
+        this.css.paddingRight = this.marginRight + "px";
+        this.css.lineHeight = this.leading + "";
+        this.css.letterSpacing = this.letterSpacing + "";
     }
-    /**
-    * Taille de la police
-    */
-    get fontSize() {
-        return parseInt(<string>this.css.fontSize);
-    }
-    set fontSize(value) {
-        this.css.fontSize = value + "pt";
-    }
-    /**
-    * Marge entre le texte et la bordure de droite
-    */
-    get mgLeft():number {
-        return parseInt(<string>this.css.paddingLeft);
-    }
-    set mgLeft(value:number) {
-        this.css.paddingLeft = value + "px";
-    }
-    /**
-    * Marge entre le texte et la bordure de droite
-    */
-    get mgRight():number {
-        return parseInt(<string>this.css.paddingRight);
-    }
-    set mgRight(value:number) {
-        this.css.paddingRight = value + "px";
-    }
-    /**
-    * Alignement du texte ( left | center | right | justify )
-    */
-    get textAlign() {
-        return this.css.textAlign;
-    }
-    set textAlign(value) {
-        this.css.textAlign = value;
-    }
-    /**
-    * Couleur du texte
-    */
-    get textColor():number {
-        return Color.hex(this.css.color ? this.css.color : "rgb(0,0,0)");
-    }
-    set textColor(value:number) {
-        this.css.color = Color.rgb(value);
+    setValue(num: number, value: (number | boolean | string)) {
+        this.vals[num] = value;
+        if (this.css != null) {
+            switch (num) {
+                case 0: this.css.fontFamily = this.name; break;
+                case 1: this.css.fontSize = this.size + "pt"; break;
+                case 2: this.css.color = Color.rgb(this.color); break;
+                case 3: this.css.fontWeight = this.bold ? "bold" : ""; break;
+                case 4: this.css.fontStyle = this.italic ? "italic" : ""; break;
+                case 5: this.css.textDecoration = this.underline ? "underline" : ""; break;
+                case 6: this.css.textAlign = this.align; break;
+                case 7: this.css.paddingLeft = this.marginLeft + "px"; break;
+                case 8: this.css.paddingRight = this.marginRight + "px"; break;
+                case 9: this.css.lineHeight = this.leading + ""; break;
+                case 10: this.css.letterSpacing = this.letterSpacing + ""; break;    
+            }
+        } 
     }
 
+    get name(): string {
+        return <string>this.vals[0]; 
+    }
+    set name(value: string) {
+        this.setValue(0, value);
+    }
+    get size(): number {
+        return <number>this.vals[1]; 
+    }
+    set size(value: number) {
+        this.setValue(1, value);
+    }
+    get color(): number {
+        return <number>this.vals[2]; 
+    }
+    set color(value: number) {
+        this.setValue(2, value);
+    }
+    get bold(): boolean {
+        return <boolean>this.vals[3]; 
+    }
+    set bold(value: boolean) {
+        this.setValue(3, value);
+    }
+    get italic(): boolean {
+        return <boolean>this.vals[4]; 
+    }
+    set italic(value: boolean) {
+        this.setValue(4, value);
+    }
+    get underline(): boolean {
+        return <boolean>this.vals[5]; 
+    }
+    set underline(value: boolean) {
+        this.setValue(5, value);
+    }
+    get align(): string {
+        return <string>this.vals[6]; 
+    }
+    set align(value: string) {
+        this.setValue(6, value);
+    }
+    get marginLeft(): number {
+        return <number>this.vals[7]; 
+    }
+    set marginLeft(value: number) {
+        this.setValue(7, value);
+    }
+    get marginRight(): number {
+        return <number>this.vals[8]; 
+    }
+    set marginRight(value: number) {
+        this.setValue(8, value);
+    }
+    get leading(): number {
+        return <number>this.vals[9]; 
+    }
+    set leading(value: number) {
+        this.setValue(9, value);
+    }
+    get letterSpacing(): number {
+        return <number>this.vals[10]; 
+    }
+    set letterSpacing(value: number) {
+        this.setValue(10, value);
+    }
 }
 
 /*******************************************************************************************
@@ -660,20 +756,47 @@ export class TextFormat {
  */
 export class TextField extends DisplayObject {
     graphics: Graphics;
+    field: HTMLDivElement;
+    private opt = [false, false, false];
     format: TextFormat;
-    private _span: HTMLSpanElement;
     constructor() {
         super(create("div"));
-        this.format = new TextFormat();
-        this._span = this.format.span;
-        this.el.appendChild(this._span);
-        this._span.style.width = "100%";
-        this._span.style.height = "100%";
+        this.field = create("div") as HTMLDivElement;
+        this.el.appendChild(this.field);
+        this.defaultTextFormat = new TextFormat();
+    }
+    set defaultTextFormat(f: TextFormat) {
+        this.format = f;
+        f.applyOn(this.field.style);
+    }
+    get mouseEnabled(): boolean {
+        return this.opt[0];
+    }
+    set mouseEnabled(value: boolean) {
+        this.opt[0] = value;
+        this.field.style.pointerEvents = value ? "visible" : "none";
+    }
+    get selectable(): boolean {
+        return this.opt[1];
+    }
+    set selectable(value: boolean) {
+        this.opt[1] = value;
+        this.field.style.userSelect = value ? "all" : "none";
+        this.field.style.msUserSelect = value ? "all" : "none";
+        this.field.style.webkitUserSelect = value ? "all" : "none";
+    }  
+    get editable(): boolean {
+        return this.opt[2];
+    }
+    set editable(value: boolean) {
+        this.opt[2] = value;
+        this.field.setAttribute("contenteditable", value.toString());
+        this.field.style.cursor = value ? "auto" : "pointer";
     }
     get text(): string {
-        return this._span.textContent || "";
+        return this.field.textContent || "";
     }
     set text(value: string) {
-        this._span.textContent = value;
+        this.field.textContent = value;
     }
 }

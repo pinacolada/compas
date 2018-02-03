@@ -3,7 +3,7 @@ import { BrowserWindow, app } from "electron";
 let win:BrowserWindow;
 
 function createWindow ():void {
-  win = new BrowserWindow({width: 1024, height: 600});
+  win = new BrowserWindow({width: 1024, height: 680});
   win.loadURL(`file://${__dirname}/index.html`);
   // win.webContents.openDevTools();
 }

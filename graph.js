@@ -41,6 +41,10 @@ class Fill {
     constructor(c = 0xFFFFFF, a = 1.0) {
         this.val = [c, a, 0];
     }
+    setTo(c = 0xFFFFFF, a = 1.0) {
+        this.val = [c, a, 0];
+        return this;
+    }
     /**
     * Couleur entre 0x000000 et 0xFFFFFF
     */
@@ -91,6 +95,12 @@ class Stroke extends Fill {
          */
         this.lineCap = "round"; //  stroke-linecap : coupé (butt), carré (square) ou arrondi (round).
         this.thickness = t;
+    }
+    setTo(t = 1.0, c = 0x000000, a = 1.0) {
+        this.color = c;
+        this.alpha = a;
+        this.thickness = t;
+        return this;
     }
     /**
     * épaisseur du trait

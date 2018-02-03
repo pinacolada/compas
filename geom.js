@@ -5,9 +5,32 @@ Object.defineProperty(exports, "__esModule", { value: true });
  * @author Jean-Marie PETIT
  */
 class Point {
-    constructor(x = 0, y = 0) {
-        this.x = x;
-        this.y = y;
+    constructor(px = 0, py = 0) {
+        let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        this.pt = Point.Create(px, py);
+    }
+    static Create(px, py) {
+        let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        let p = svg.createSVGPoint();
+        p.x = px;
+        p.y = py;
+        return p;
+    }
+    matrixTransform(mat) {
+        let alt = this.pt.matrixTransform(mat.m);
+        return new Point(alt.x, alt.y);
+    }
+    get x() {
+        return this.pt.x;
+    }
+    set x(value) {
+        this.pt.x = value;
+    }
+    get y() {
+        return this.pt.y;
+    }
+    set y(value) {
+        this.pt.y = value;
     }
     setTo(px = 0, py = 0) {
         this.x = px;
@@ -36,7 +59,16 @@ exports.Point = Point;
  */
 class Rectangle {
     constructor(px = 0, py = 0, w = 0, h = 0) {
-        this.setTo(px, py, w, h);
+        this.rect = Rectangle.Create(px, py, w, h);
+    }
+    static Create(px, py, w, h) {
+        let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        let r = svg.createSVGRect();
+        r.x = px;
+        r.y = py;
+        r.width = w;
+        r.height = h;
+        return r;
     }
     /**
      * Définit la position et la taille du rectangle
@@ -95,38 +127,40 @@ class Rectangle {
         return new Point(this.right, this.bottom);
     }
     get x() {
-        let val = this.css.left;
-        return (val == null) ? 0 : parseInt(val);
+        return this.rect.x;
     }
     set x(value) {
-        this.css.left = value + "px";
+        this.rect.x = value;
+        this.css.left = this.rect.x + "px";
     }
     get y() {
-        let val = this.css.top;
-        return (val == null) ? 0 : parseInt(val);
+        return this.rect.y;
     }
     set y(value) {
-        this.css.top = value + "px";
+        this.rect.y = value;
+        this.css.top = this.rect.y + "px";
     }
     get width() {
-        let val = this.css.width;
-        return (val == null) ? 0 : parseInt(val);
+        return this.rect.width;
     }
     set width(value) {
-        this.css.width = value + "px";
+        this.rect.width = value;
+        this.css.width = this.rect.width + "px";
     }
     get height() {
-        let val = this.css.height;
-        return (val == null) ? 0 : parseInt(val);
+        return this.rect.height;
     }
     set height(value) {
-        this.css.height = value + "px";
+        this.rect.height = value;
+        this.css.height = this.rect.height + "px";
     }
     toString() {
-        return `(x:${this.x},y:${this.y})-(${this.width} x ${this.height})`;
+        let r = this.rect;
+        return `(x:${r.x},y:${r.y})-(${r.width} x ${r.height})`;
     }
     clone() {
-        return new Rectangle(this.x, this.y, this.width, this.height);
+        let r = this.rect;
+        return new Rectangle(r.x, r.y, r.width, r.height);
     }
 }
 exports.Rectangle = Rectangle;
@@ -136,61 +170,132 @@ class Filter {
 }
 exports.Filter = Filter;
 class Matrix {
-    constructor() {
+    constructor(a, b, c, d, tx, ty) {
+        this.m = Matrix.Create();
+        this.setTo(a, b, c, d, tx, ty);
+    }
+    static Create() {
+        let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        return svg.createSVGMatrix();
+    }
+    static Copy(m) {
+        let alt = Matrix.Create();
+        alt.a = m.a;
+        alt.b = m.b;
+        alt.c = m.c;
+        alt.d = m.d;
+        alt.e = m.e;
+        alt.f = m.f;
+        return alt;
+    }
+    static With(m) {
+        return new Matrix(m.a, m.b, m.c, m.d, m.e, m.f);
+    }
+    setTo(a, b, c, d, tx, ty) {
+        this.m.a = a;
+        this.m.b = b;
+        this.m.c = c;
+        this.m.d = d;
+        this.m.e = tx;
+        this.m.f = ty;
+    }
+    multiply(secondMatrix) {
+        let m = Matrix.Copy(this.m);
+        return Matrix.With(m.multiply(secondMatrix.m));
+    }
+    inverse() {
+        let m = Matrix.Copy(this.m);
+        return Matrix.With(m.inverse());
+    }
+    translate(x, y) {
+        let m = Matrix.Copy(this.m);
+        return Matrix.With(m.translate(x, y));
+    }
+    scale(scaleFactor) {
+        let m = Matrix.Copy(this.m);
+        return Matrix.With(m.scale(scaleFactor));
+    }
+    scaleNonUniform(scaleFactorX, scaleFactorY) {
+        let m = Matrix.Copy(this.m);
+        return Matrix.With(m.scaleNonUniform(scaleFactorX, scaleFactorY));
+    }
+    rotate(angle) {
+        let m = Matrix.Copy(this.m);
+        return Matrix.With(m.rotate(angle));
+    }
+    rotateFromVector(x, y) {
+        let m = Matrix.Copy(this.m);
+        return Matrix.With(m.rotateFromVector(x, y));
+    }
+    flipX() {
+        let m = Matrix.Copy(this.m);
+        return Matrix.With(m.flipX());
+    }
+    flipY() {
+        let m = Matrix.Copy(this.m);
+        return Matrix.With(m.flipY());
+    }
+    skewX(angle) {
+        let m = Matrix.Copy(this.m);
+        return Matrix.With(m.skewX(angle));
+    }
+    skewY(angle) {
+        let m = Matrix.Copy(this.m);
+        return Matrix.With(m.skewY(angle));
     }
     /**
     * Première valeur
     */
     get a() {
-        return this.val[0];
+        return this.m.a;
     }
     set a(value) {
-        this.val[0] = value;
+        this.m.a = value;
     }
     /**
-    * Première valeur
+    * Seconde valeur
     */
     get b() {
-        return this.val[1];
+        return this.m.b;
     }
     set b(value) {
-        this.val[1] = value;
+        this.m.b = value;
     }
     /**
-    * Première valeur
+    * Troisième valeur
     */
     get c() {
-        return this.val[2];
+        return this.m.c;
     }
     set c(value) {
-        this.val[2] = value;
+        this.m.c = value;
     }
     /**
-    * Première valeur
+    * Quatrième valeur
     */
     get d() {
-        return this.val[3];
+        return this.m.d;
     }
     set d(value) {
-        this.val[3] = value;
+        this.m.d = value;
     }
     /**
-* Première valeur
-*/
+    * Cinquième valeur
+    */
     get tx() {
-        return this.val[4];
+        return this.m.e;
     }
     set tx(value) {
-        this.val[4] = value;
+        this.m.e = value;
     }
     /**
-* Première valeur
-*/
+    * Sixième valeur
+    */
     get ty() {
-        return this.val[5];
+        return this.m.f;
     }
     set ty(value) {
-        this.val[5] = value;
+        this.m.f = value;
     }
 }
 exports.Matrix = Matrix;

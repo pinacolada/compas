@@ -30,26 +30,22 @@ class Listener {
         this.target = target;
         this.type = type;
         this.callback = callback;
-        this.start();
+        let fx = (e: Event) => this.callback(this.target, e);
+        this.target.el.addEventListener(this.type, fx); 
     }
+
     handleEvent(e: Event) {
-        this.callback.call(this.target, e);
+        this.callback(this.target, e);
     }
-    start(): void {
-        this.target.el.addEventListener(this.type, (e)=> this.callback(this.target, e));
-    }
-    stop(): void {
-        this.target.el.removeEventListener(this.type,(e)=> this.callback(this.target, e));
+    remove(): void {
+        let fx = (e: Event) => this.callback(this.target, e);
+        this.target.el.removeEventListener(this.type, fx);
+        const l:Listener[] = this.target.listeners, i = l.indexOf(this); 
+        l.splice(i, 1);
     }
     public match(type:String, callback:Function):boolean {
         return this.type === type && this.callback === callback;
     }       
-    public remove():void 
-    {
-        this.stop();
-        const l = this.target.listeners;
-        l.splice(l.indexOf(this), 1);   
-    }
 }
 
 
@@ -68,6 +64,15 @@ class EventDispatcher {
         this.el = element;
     }
     /**
+     * Nom (id) de l'élément 
+     */
+    get name(): string {
+        return this.el.id;
+    }
+    set name(value: string) {
+        this.setAttr("id", value);
+    }
+    /**
      * Valeur numérique d'un attribut
      * @param attrName Attribut dont on veut la valeur numérique
      */
@@ -83,21 +88,22 @@ class EventDispatcher {
     _setIntAttr(attrName: string, value:number):void {
         this.el.setAttribute(attrName, value.toString());
     }
-    addEventListener(type: string, callback: Function): void {
+    addListener(type: string, callback: Function): void {
         if (this.listeners.some((l: Listener) => l.match(type, callback))) return;
         this.listeners.push(new Listener(this, type, callback));
     }
-    dispatchEvent(a:Event): void {
+    dispatch(type: string): void {
+        const e = new Event(type);
         this.listeners.filter(
-            (item: Listener) => item.type == a.type).forEach(
-            (item: Listener) => item.callback(a));
+            (item: Listener) => item.type == type).forEach(
+            (item: Listener) => item.callback(this, e));
     }
-    removeEventListener(type: string, callback: Function): void {
+    removeListener(type: string, callback: Function): void {
         var existe = this.listeners.find((l: Listener) => l.match(type, callback));
-        if (existe != undefined) existe.stop();
+        if (existe) existe.remove();
     }
     removeAllListeners(): void {
-        this.listeners.forEach((item: Listener) => item.stop());
+        this.listeners.forEach((item: Listener) => item.remove());
     }
     setAttr(attrName: string, attrVal: string): void {
         this.el.setAttribute(attrName, attrVal);
@@ -164,11 +170,12 @@ export class DisplayObject extends EventDispatcher {
         this.backgroundAlpha = a;
         return this;
     }
-    setBorder(t:number, c:number, a:number, styl:string): DisplayObject {
+    setBorder(t:number, c:number, a:number, styl:string, radius:number=0): DisplayObject {
         this.borderColor = c;
         this.borderAlpha = a;
         this.borderWidth = t;
         this.borderStyle = styl;
+        if (radius) this.borderRadius = radius;
         return this;
     }
     /**
@@ -303,15 +310,6 @@ export class DisplayObject extends EventDispatcher {
         return this.stage ? this.stage.mouseY : 0;
     }
     /**
-     * Nom (id) de l'élément 
-     */
-    get name(): string {
-        return this.el.id;
-    }
-    set name(value: string) {
-        this.setAttr("id", value);
-    }
-    /**
      * Gauche du DisplayObject (dans son parent)
      */
     get x(): number {
@@ -320,7 +318,7 @@ export class DisplayObject extends EventDispatcher {
     set x(value: number) {
         if (this.rect.x != value) {
             this.rect.x = value;
-            this.dispatchEvent(new Event("pos"));
+            this.dispatch("pos");
         }
     }
     /**
@@ -332,7 +330,7 @@ export class DisplayObject extends EventDispatcher {
     set y(value: number) {
         if (this.rect.y != value) {
             this.rect.y = value;
-            this.dispatchEvent(new Event("pos"));
+            this.dispatch("pos");
         }
     }
     /**
@@ -344,7 +342,7 @@ export class DisplayObject extends EventDispatcher {
     set width(value: number) {
         if (this.rect.width != value) {
             this.rect.width = value;
-            this.dispatchEvent(new Event("size"));
+            this.dispatch("size");
         }
     }
     /**
@@ -356,7 +354,7 @@ export class DisplayObject extends EventDispatcher {
     set height(value: number) {
         if (this.rect.height != value) {
             this.rect.height = value;
-            this.dispatchEvent(new Event("size"));
+            this.dispatch("size");
         }
     }
 }
@@ -496,9 +494,14 @@ export class Stage extends DisplayObjectContainer {
         this.css.position = "relative";
         this.name = "stage";
         this.graphics = new Graphics(this, this.el);
-        this.addEventListener("mousemove", Stage.handleMouse);
-        window.addEventListener("resize", (e: UIEvent) => Stage.handleSize(this, e));
-        Stage.handleSize(this);
+        window.addEventListener("resize", e => {
+            // Mémorise en attribut la taille de la scène (utilisée)
+            this._setIntAttr("stageWidth", window.innerWidth);
+            this._setIntAttr("stageHeight", window.innerHeight);
+            this.css.width = window.innerWidth + "px";
+            this.css.height = window.innerHeight + "px";          
+        });
+        this.addListener("mousemove", this.handleMouse);
         this.backgroundColor = color;
         this.parent = this;
         this._stage = this;
@@ -511,17 +514,9 @@ export class Stage extends DisplayObjectContainer {
         return this;
     }
 
-    public static handleSize(stage:Stage, e?:UIEvent) {
-        // Mémorise en attribut la taille de la scène (utilisée) 
-        stage._setIntAttr("stageWidth", window.innerWidth);
-        stage._setIntAttr("stageHeight", window.innerHeight);
-        stage.css.width = window.innerWidth + "px";
-        stage.css.height = window.innerHeight + "px";
-    }
-
-    public static handleMouse(stage: Stage, e: MouseEvent) {
+    handleMouse(s:Stage, e: MouseEvent) {
         let hitEl: HTMLElement = e.target as HTMLElement;
-        stage.hitElement = hitEl;
+        s.hitElement = hitEl;
         let hitR: ClientRect = hitEl.getBoundingClientRect();
         let [ecX, ecY, mx, my] = [e.clientX, e.clientY, e.clientX - hitR.left, e.clientY-hitR.top];
 
@@ -530,8 +525,8 @@ export class Stage extends DisplayObjectContainer {
         hitEl.setAttribute("mouseY", my.toString());
 
         // Mémorise sur la scène en attributs la position de la souris  
-        stage._setIntAttr("mouseX", ecX);
-        stage._setIntAttr("mouseY", ecY);
+        s._setIntAttr("mouseX", ecX);
+        s._setIntAttr("mouseY", ecY);
 
         // ---------- TODO : enlever en production ------------
         //             Affichage dans le document
@@ -539,8 +534,8 @@ export class Stage extends DisplayObjectContainer {
         findIn("inId").value = hitEl.id;
         findIn("x").value = mx.toString();
         findIn("y").value = my.toString(); 
-        findIn("sx").value = stage.stageX.toString();
-        findIn("sy").value = stage.stageY.toString();
+        findIn("sx").value = s.stageX.toString();
+        findIn("sy").value = s.stageY.toString();
         const r =  hitEl.getBoundingClientRect()
         findIn("rect").value = `(x:${r.left},y:${r.top})-(W:${r.width}-H:${r.height})`;
     }

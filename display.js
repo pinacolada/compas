@@ -25,24 +25,20 @@ class Listener {
         this.target = target;
         this.type = type;
         this.callback = callback;
-        this.start();
+        let fx = (e) => this.callback(this.target, e);
+        this.target.el.addEventListener(this.type, fx);
     }
     handleEvent(e) {
-        this.callback.call(this.target, e);
+        this.callback(this.target, e);
     }
-    start() {
-        this.target.el.addEventListener(this.type, (e) => this.callback(this.target, e));
-    }
-    stop() {
-        this.target.el.removeEventListener(this.type, (e) => this.callback(this.target, e));
+    remove() {
+        let fx = (e) => this.callback(this.target, e);
+        this.target.el.removeEventListener(this.type, fx);
+        const l = this.target.listeners, i = l.indexOf(this);
+        l.splice(i, 1);
     }
     match(type, callback) {
         return this.type === type && this.callback === callback;
-    }
-    remove() {
-        this.stop();
-        const l = this.target.listeners;
-        l.splice(l.indexOf(this), 1);
     }
 }
 /*******************************************************************************************
@@ -56,6 +52,15 @@ class EventDispatcher {
     constructor(element) {
         this.listeners = [];
         this.el = element;
+    }
+    /**
+     * Nom (id) de l'élément
+     */
+    get name() {
+        return this.el.id;
+    }
+    set name(value) {
+        this.setAttr("id", value);
     }
     /**
      * Valeur numérique d'un attribut
@@ -73,21 +78,22 @@ class EventDispatcher {
     _setIntAttr(attrName, value) {
         this.el.setAttribute(attrName, value.toString());
     }
-    addEventListener(type, callback) {
+    addListener(type, callback) {
         if (this.listeners.some((l) => l.match(type, callback)))
             return;
         this.listeners.push(new Listener(this, type, callback));
     }
-    dispatchEvent(a) {
-        this.listeners.filter((item) => item.type == a.type).forEach((item) => item.callback(a));
+    dispatch(type) {
+        const e = new Event(type);
+        this.listeners.filter((item) => item.type == type).forEach((item) => item.callback(this, e));
     }
-    removeEventListener(type, callback) {
+    removeListener(type, callback) {
         var existe = this.listeners.find((l) => l.match(type, callback));
-        if (existe != undefined)
-            existe.stop();
+        if (existe)
+            existe.remove();
     }
     removeAllListeners() {
-        this.listeners.forEach((item) => item.stop());
+        this.listeners.forEach((item) => item.remove());
     }
     setAttr(attrName, attrVal) {
         this.el.setAttribute(attrName, attrVal);
@@ -131,11 +137,13 @@ class DisplayObject extends EventDispatcher {
         this.backgroundAlpha = a;
         return this;
     }
-    setBorder(t, c, a, styl) {
+    setBorder(t, c, a, styl, radius = 0) {
         this.borderColor = c;
         this.borderAlpha = a;
         this.borderWidth = t;
         this.borderStyle = styl;
+        if (radius)
+            this.borderRadius = radius;
         return this;
     }
     /**
@@ -269,15 +277,6 @@ class DisplayObject extends EventDispatcher {
         return this.stage ? this.stage.mouseY : 0;
     }
     /**
-     * Nom (id) de l'élément
-     */
-    get name() {
-        return this.el.id;
-    }
-    set name(value) {
-        this.setAttr("id", value);
-    }
-    /**
      * Gauche du DisplayObject (dans son parent)
      */
     get x() {
@@ -286,7 +285,7 @@ class DisplayObject extends EventDispatcher {
     set x(value) {
         if (this.rect.x != value) {
             this.rect.x = value;
-            this.dispatchEvent(new Event("pos"));
+            this.dispatch("pos");
         }
     }
     /**
@@ -298,7 +297,7 @@ class DisplayObject extends EventDispatcher {
     set y(value) {
         if (this.rect.y != value) {
             this.rect.y = value;
-            this.dispatchEvent(new Event("pos"));
+            this.dispatch("pos");
         }
     }
     /**
@@ -310,7 +309,7 @@ class DisplayObject extends EventDispatcher {
     set width(value) {
         if (this.rect.width != value) {
             this.rect.width = value;
-            this.dispatchEvent(new Event("size"));
+            this.dispatch("size");
         }
     }
     /**
@@ -322,7 +321,7 @@ class DisplayObject extends EventDispatcher {
     set height(value) {
         if (this.rect.height != value) {
             this.rect.height = value;
-            this.dispatchEvent(new Event("size"));
+            this.dispatch("size");
         }
     }
 }
@@ -447,9 +446,14 @@ class Stage extends DisplayObjectContainer {
         this.css.position = "relative";
         this.name = "stage";
         this.graphics = new graph_1.Graphics(this, this.el);
-        this.addEventListener("mousemove", Stage.handleMouse);
-        window.addEventListener("resize", (e) => Stage.handleSize(this, e));
-        Stage.handleSize(this);
+        window.addEventListener("resize", e => {
+            // Mémorise en attribut la taille de la scène (utilisée)
+            this._setIntAttr("stageWidth", window.innerWidth);
+            this._setIntAttr("stageHeight", window.innerHeight);
+            this.css.width = window.innerWidth + "px";
+            this.css.height = window.innerHeight + "px";
+        });
+        this.addListener("mousemove", this.handleMouse);
         this.backgroundColor = color;
         this.parent = this;
         this._stage = this;
@@ -459,32 +463,25 @@ class Stage extends DisplayObjectContainer {
     get stage() {
         return this;
     }
-    static handleSize(stage, e) {
-        // Mémorise en attribut la taille de la scène (utilisée) 
-        stage._setIntAttr("stageWidth", window.innerWidth);
-        stage._setIntAttr("stageHeight", window.innerHeight);
-        stage.css.width = window.innerWidth + "px";
-        stage.css.height = window.innerHeight + "px";
-    }
-    static handleMouse(stage, e) {
+    handleMouse(s, e) {
         let hitEl = e.target;
-        stage.hitElement = hitEl;
+        s.hitElement = hitEl;
         let hitR = hitEl.getBoundingClientRect();
         let [ecX, ecY, mx, my] = [e.clientX, e.clientY, e.clientX - hitR.left, e.clientY - hitR.top];
         // Mémorise dans l'élément les propriétés mouseX, mouseY
         hitEl.setAttribute("mouseX", mx.toString());
         hitEl.setAttribute("mouseY", my.toString());
         // Mémorise sur la scène en attributs la position de la souris  
-        stage._setIntAttr("mouseX", ecX);
-        stage._setIntAttr("mouseY", ecY);
+        s._setIntAttr("mouseX", ecX);
+        s._setIntAttr("mouseY", ecY);
         // ---------- TODO : enlever en production ------------
         //             Affichage dans le document
         // ----------------------------------------------------
         exports.findIn("inId").value = hitEl.id;
         exports.findIn("x").value = mx.toString();
         exports.findIn("y").value = my.toString();
-        exports.findIn("sx").value = stage.stageX.toString();
-        exports.findIn("sy").value = stage.stageY.toString();
+        exports.findIn("sx").value = s.stageX.toString();
+        exports.findIn("sy").value = s.stageY.toString();
         const r = hitEl.getBoundingClientRect();
         exports.findIn("rect").value = `(x:${r.left},y:${r.top})-(W:${r.width}-H:${r.height})`;
     }

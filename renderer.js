@@ -38,7 +38,7 @@ for (let j = 0; j < stage.height; j += 50) {
 }
 let hsl = new ui_1.HSLColorPicker("hsl", stage, 25, 310, 0xFFFFFF);
 hsl.callback = changeHSL;
-let rp = new ui_1.RGBColorPicker("rgb", stage, 300, 310, 0x336699);
+let rp = new ui_1.RGBColorPicker("rgb", stage, 125, 310, 0x336699);
 rp.callback = changeRGB;
 const bCreEl = new ui_1.Button("cre", stage, 735, 70, 150, 40, 0x666666, "Créer un élément");
 bCreEl.addListener("click", createElement);

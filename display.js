@@ -164,9 +164,27 @@ class DisplayObject extends EventDispatcher {
         this.rect.setTo(px, py, w, h);
         return this;
     }
+    /**
+     * Reproduit la position et la taille d'un rectangle
+     * @param r rectangle à copier
+     */
     setRectAs(r) {
         this.rect.setTo(r.x, r.y, r.width, r.height);
         return this;
+    }
+    /**
+     * Envoie le displayObject à l'arrière-plan sur son parent
+     */
+    toBack() {
+        if (this.parent)
+            this.parent.addChildAt(0, this);
+    }
+    /**
+     * Met le displayObject au premier-plan sur son parent
+     */
+    toFront() {
+        if (this.parent)
+            this.parent.addChildAt(this.parent.numChildren - 1, this);
     }
     /**
      * Transparence générale (opacité)

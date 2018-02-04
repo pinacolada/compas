@@ -20,7 +20,6 @@ const create = (type: string) => document.createElement(type);
 /*******************************************************************************************
 * L I S T E N E R
 ********************************************************************************************/
-
 class Listener {
     public target:EventDispatcher;
     public type:string;
@@ -48,11 +47,9 @@ class Listener {
     }       
 }
 
-
 /*******************************************************************************************
 * E V E N T  D I S P a T C H E R
 ********************************************************************************************/
-
 /**
  * Diffuseur/écouteur d'événements générique
  * @author Jean-Marie PETIT
@@ -144,7 +141,6 @@ export class DisplayObject extends EventDispatcher {
         this.back = new Fill();
         this.border = new Stroke(); 
     }
-
     /**
      * Définit un arrière-plan en dégradé   
      * @param type type du dégradé ("linear"|"radial")
@@ -196,10 +192,25 @@ export class DisplayObject extends EventDispatcher {
         this.rect.setTo(px, py, w, h);
         return this;
     }
-
+    /**
+     * Reproduit la position et la taille d'un rectangle
+     * @param r rectangle à copier
+     */
     setRectAs(r: Rectangle): DisplayObject {
         this.rect.setTo(r.x, r.y, r.width, r.height);
         return this;
+    }
+    /**
+     * Envoie le displayObject à l'arrière-plan sur son parent
+     */
+    toBack() {
+        if (this.parent)  this.parent.addChildAt(0, this);    
+    }
+    /**
+     * Met le displayObject au premier-plan sur son parent
+     */
+    toFront() {
+        if (this.parent) this.parent.addChildAt(this.parent.numChildren - 1, this);
     }
     /**
      * Transparence générale (opacité)

@@ -123,24 +123,38 @@ export class Slider extends Box {
     }
 }
 
-
-export class RGBColorPicker extends Box {
+class ColorPicker extends Box {
     view: Box;
-    callback: Function;
-    rgb: string;
-    sel: HTMLDivElement;
+    callback: Function;  
     constructor(id: string, target: DisplayObjectContainer, px: number, py: number, currentColor: number) {
         super(id, target, px, py, 250, 180, 0x666666, 0xFFFFFF, "outset", 4);
         this.view = new Box("view", this, 3, 3, 30, 20, currentColor, 0x999999, "inset", 0);
         this.view.cursor = "pointer";
         this.view.addListener("click", (b: Box, e: Event) => this.toggleFold(this, b));
+    }
+    toggleFold(palette: ColorPicker, view: Box) { 
+        if (palette.width > 50) {
+            palette.width = 40, palette.height = 30;
+            palette.toBack();
+        } else {
+            palette.width = 250, palette.height = 180;
+            palette.toFront();
+        }        
+    }
+}
+
+export class RGBColorPicker extends ColorPicker {
+    rgb: string;
+    sel: HTMLDivElement;
+    constructor(id: string, target: DisplayObjectContainer, px: number, py: number, currentColor: number) {
+        super(id, target, px, py, currentColor);
         var t: string = "0369CF", c = "", r, g, b, px = 4, py = 28;
         let view: Box = this.view, pal: RGBColorPicker = this;
         for (r =0 ; r < t.length; r++){
             for (g =0; g < t.length; g++) {
                 for (b=0; b < t.length; b++) {
-                    c = "#" + t.charAt(r)+t.charAt(r) + t.charAt(g)+t.charAt(g) + t.charAt(b)+t.charAt(b);
-                    addColor(this.el, px, py, c);
+                    c = "#" + t.charAt(r).repeat(2) + t.charAt(g).repeat(2) + t.charAt(b).repeat(2);
+                    addColor(this.el, px, py,c);
                     px += 12;
                     if (px > 219) {
                         px = 4; py += 11;
@@ -184,15 +198,8 @@ export class RGBColorPicker extends Box {
         }
         this.toggleFold(this, this.view);
     }
-    toggleFold(pal: RGBColorPicker, b: Box) { 
-        if (pal.width > 50) {
-            pal.width = 40, pal.height = 30;
-        } else {
-            pal.width = 250, pal.height = 180;
-        }        
-    }
 }
-export class HSLColorPicker extends Box {
+export class HSLColorPicker extends ColorPicker {
     view: Box;
     hue: Slider;
     sat: Slider;
@@ -200,11 +207,7 @@ export class HSLColorPicker extends Box {
     hsl: string;
     callback: Function;
     constructor(id: string, target: DisplayObjectContainer, px: number, py: number, currentColor: number) {
-        super(id, target, px, py, 250, 180, 0x666666, 0xFFFFFF, "outset", 4);
-        this.view = new Box("view", this, 3, 3, 30, 20, currentColor, 0x999999, "inset", 0);
-        this.view.cursor = "pointer";
-        this.view.addListener("click", (b: Box, e: Event) => this.foldUnfold(this, b));
-        
+        super(id, target, px, py, currentColor);
         this.hue = new Slider("Hue", this, 10, 35, 210, 0, 0, 360, false);
         const par6:number = 255 / 6;
         this.hue.gradientBackground(
@@ -223,16 +226,7 @@ export class HSLColorPicker extends Box {
         this.lum.addListener("change", (s: Slider, e: Event) => this.show());
 
         this.show();
-        this.foldUnfold(this, this.view);
-
-    }
-    foldUnfold(pal: HSLColorPicker, b: Box) {
-        
-        if (pal.width > 50) {
-            pal.width = 40, pal.height = 30;
-        } else {
-            pal.width = 250, pal.height = 180;
-        }        
+        this.toggleFold(this, this.view);
     }
     show() {
         this.hsl = "hsl(" + Math.floor(this.hue.value * 360)+"," + this.sat.pCentT+","+ this.lum.pCentT + ")";

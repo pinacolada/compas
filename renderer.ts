@@ -54,7 +54,7 @@ for (let j = 0; j < stage.height; j += 50) {
 let hsl: HSLColorPicker = new HSLColorPicker("hsl", stage, 25, 310, 0xFFFFFF);
 hsl.callback = changeHSL;
 
-let rp: RGBColorPicker = new RGBColorPicker("rgb", stage, 300, 310, 0x336699);
+let rp: RGBColorPicker = new RGBColorPicker("rgb", stage, 125, 310, 0x336699);
 rp.callback = changeRGB;
 
 const bCreEl:Button = new Button("cre", stage, 735, 70, 150, 40, 0x666666, "Créer un élément");

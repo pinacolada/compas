@@ -21,6 +21,12 @@ const create = (type) => document.createElement(type);
 * L I S T E N E R
 ********************************************************************************************/
 class Listener {
+    /**
+     * Définit un écouteur d'événement pour un EventDispatcher
+     * @param {EventDispatcher} target cible de l'événement
+     * @param {string} type type d'événement à écouter
+     * @param {Function} callback réaction à l'événement (target, event)
+     */
     constructor(target, type, callback) {
         this.target = target;
         this.type = type;
@@ -28,15 +34,27 @@ class Listener {
         let fx = (e) => this.callback(this.target, e);
         this.target.el.addEventListener(this.type, fx);
     }
+    /**
+     * Réaction à l'événement
+     * @param e événement
+     */
     handleEvent(e) {
         this.callback(this.target, e);
     }
+    /**
+     * Supprime l'écoute et la détruit
+     */
     remove() {
         let fx = (e) => this.callback(this.target, e);
         this.target.el.removeEventListener(this.type, fx);
         const l = this.target.listeners, i = l.indexOf(this);
         l.splice(i, 1);
     }
+    /**
+     * Teste la correspondance entre une écoute et celle-ci
+     * @param {string} type type de l'événement à écouter
+     * @param {Function} callback réaction attendue
+     */
     match(type, callback) {
         return this.type === type && this.callback === callback;
     }
@@ -49,6 +67,10 @@ class Listener {
  * @author Jean-Marie PETIT
  */
 class EventDispatcher {
+    /**
+     * Crée un écouteur-diffuseur générique
+     * @param element élement HTML embarqué
+     */
     constructor(element) {
         this.listeners = [];
         this.el = element;
@@ -64,7 +86,14 @@ class EventDispatcher {
     }
     /**
      * Valeur numérique d'un attribut
-     * @param attrName Attribut dont on veut la valeur numérique
+     * @param {string} propName propriété css dont on veut la valeur numérique
+     */
+    _getIntCss(propName) {
+        return parseInt(this.el.style.getPropertyValue(propName));
+    }
+    /**
+     * Valeur numérique d'un attribut
+     * @param {string} attrName Attribut dont on veut la valeur numérique
      */
     _getIntAttr(attrName) {
         const attr = this.el.getAttribute(attrName);
@@ -72,31 +101,63 @@ class EventDispatcher {
     }
     /**
      * Définit la valeur numérique d'un attribut
-     * @param attrName nom de l'attribut
+     * @param {string} attrName nom de l'attribut
      * @param value valeur (entière) de l'attribut
      */
     _setIntAttr(attrName, value) {
         this.el.setAttribute(attrName, value.toString());
     }
+    /**
+     * Ajoute un écouteur d'événement
+     * @param {string} type type de l'événement
+     * @param {Function} callback réaction à l'événement
+     */
     addListener(type, callback) {
         if (this.listeners.some((l) => l.match(type, callback)))
             return;
         this.listeners.push(new Listener(this, type, callback));
     }
+    /**
+     * Produit un événement
+     * @param type type de l'événement à créer
+     */
     dispatch(type) {
         const e = new Event(type);
         this.listeners.filter((item) => item.type == type).forEach((item) => item.callback(this, e));
     }
+    /**
+     * Crée et active un écouteur d'événement
+     * @param {string} type type de l'écoute
+     * @param {Function} callback réaction à l'écoute
+     */
     removeListener(type, callback) {
         var existe = this.listeners.find((l) => l.match(type, callback));
         if (existe)
             existe.remove();
     }
+    /**
+     * Supprime tous les écouteurs d'événements
+     */
     removeAllListeners() {
         this.listeners.forEach((item) => item.remove());
     }
-    setAttr(attrName, attrVal) {
-        this.el.setAttribute(attrName, attrVal);
+    /**
+     * Modifie en une passe une liste d'attributs
+     * @param {string[]} attrVals noms et valeurs d'attributs alternés
+     */
+    setAttr(...attrVals) {
+        for (var i = 0; i < attrVals.length; i++) {
+            this.el.setAttribute(attrVals[i], attrVals[++i]);
+        }
+    }
+    /**
+     * Modifie en une passe une liste de propriétés css
+     * @param {string[]} propsVals propriétés et valeurs alternées
+     */
+    setCss(...propsVals) {
+        for (var i = 0; i < propsVals.length; i++) {
+            this.el.style.setProperty(propsVals[i], propsVals[++i]);
+        }
     }
 }
 /*******************************************************************************************
@@ -150,8 +211,8 @@ class DisplayObject extends EventDispatcher {
      * Définit la luminosité appliquée sur le DisplayObject
      * @param percent nombre entier (50 = 50% | 120 = 120%...)
      */
-    setLigth(percent) {
-        this.css.filter = "brightness(" + percent + "%)";
+    setBrightness(percent) {
+        this.setCss("filter", "brightness(" + percent + "%)");
     }
     /**
      * Définit la position et la taille du DisplayObject
@@ -190,11 +251,10 @@ class DisplayObject extends EventDispatcher {
      * Transparence générale (opacité)
      */
     get alpha() {
-        let o = this.css.opacity;
-        return o != null ? parseFloat(o) : 1.0;
+        return this._getIntCss("opacity");
     }
     set alpha(value) {
-        this.css.opacity = value.toString();
+        this.setCss("opacity", value.toString());
     }
     /**
     * Transparence du fond

@@ -1,5 +1,5 @@
 import {DisplayObjectContainer, DisplayObject, Stage, Sprite, Shape, TextField, TextFormat, findIn } from "./display";
-import { Button, DisplayGrid, HSLColorPicker, RGBColorPicker } from "./ui";
+import { Button, ResizerGrid, HSLColorPicker, RGBColorPicker, Slider, ColorPicker } from "./ui";
 
 let stage: Stage = new Stage(1024, 600, 0x9999FF);
 var carre: Sprite = new Sprite();
@@ -51,20 +51,24 @@ for (let j = 0; j < stage.height; j += 50) {
     stage.graphics.moveTo(0, j);
     stage.graphics.lineTo(stage.width, j);
 }
-let hsl: HSLColorPicker = new HSLColorPicker("hsl", stage, 25, 310, 0xFFFFFF);
-hsl.callback = changeHSL;
+let hsl: HSLColorPicker = new HSLColorPicker("hsl", stage, 25, 310, 0xFF00FF);
+hsl.callback = changeColor;
 
 let rp: RGBColorPicker = new RGBColorPicker("rgb", stage, 125, 310, 0x336699);
-rp.callback = changeRGB;
+rp.callback = changeColor;
 
 const bCreEl:Button = new Button("cre", stage, 735, 70, 150, 40, 0x666666, "Créer un élément");
 bCreEl.addListener("click", createElement);
+
+let alpha = new Slider("alpha", stage, 25, 550, 200, 1, 0, 1, true);
+alpha.gradientBackground([0x000000, 0x000000], [0, 1], [0, 255], 90);
+alpha.addListener("change", () => changeAlpha(alpha));
 
 let currentSprite: Sprite | null;
 const fram: Sprite = new Sprite();
 fram.setBorder(1, 0xFF0000, 0.6, "dotted");
 
-const grid: DisplayGrid = new DisplayGrid();
+const grid: ResizerGrid = new ResizerGrid();
 let numCurrent = 1;
 
 stage.addListener("keydown", (s:Stage, e: KeyboardEvent) => {
@@ -82,7 +86,7 @@ stage.addListener("keydown", (s:Stage, e: KeyboardEvent) => {
     } else if (e.key === "ArrowRight") {
         e.shiftKey? currentSprite.width++ : currentSprite.x++;
     }
-    if(currentSprite) grid.ajustTo(currentSprite);
+    if(currentSprite) grid.displayOn(currentSprite);
 });
 
 function createElement(b:Button, e: MouseEvent) {
@@ -128,16 +132,16 @@ function setCurrentSprite(el: Sprite) {
     currentSprite = el;
     if (currentSprite) {
         currentSprite.addChild(grid);
-        grid.ajustTo(currentSprite);
+        grid.displayOn(currentSprite);
     }
 }
-function changeHSL(h:HSLColorPicker) {
-    if (currentSprite != null) {
-        currentSprite.css.backgroundColor = h.hsl;
+function changeColor(h:ColorPicker) {
+    if (currentSprite) {
+        currentSprite.setBackground(h.color, currentSprite.backgroundAlpha);
     }
 }
-function changeRGB(r:RGBColorPicker) {
-    if (currentSprite != null) {
-        currentSprite.css.backgroundColor = r.rgb;
+function changeAlpha(alpha:Slider) {
+    if (currentSprite) {
+        currentSprite.setBackground(currentSprite.backgroundColor, alpha.pct);
     }
 }

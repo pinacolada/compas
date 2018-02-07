@@ -36,16 +36,19 @@ for (let j = 0; j < stage.height; j += 50) {
     stage.graphics.moveTo(0, j);
     stage.graphics.lineTo(stage.width, j);
 }
-let hsl = new ui_1.HSLColorPicker("hsl", stage, 25, 310, 0xFFFFFF);
-hsl.callback = changeHSL;
+let hsl = new ui_1.HSLColorPicker("hsl", stage, 25, 310, 0xFF00FF);
+hsl.callback = changeColor;
 let rp = new ui_1.RGBColorPicker("rgb", stage, 125, 310, 0x336699);
-rp.callback = changeRGB;
+rp.callback = changeColor;
 const bCreEl = new ui_1.Button("cre", stage, 735, 70, 150, 40, 0x666666, "Créer un élément");
 bCreEl.addListener("click", createElement);
+let alpha = new ui_1.Slider("alpha", stage, 25, 550, 200, 1, 0, 1, true);
+alpha.gradientBackground([0x000000, 0x000000], [0, 1], [0, 255], 90);
+alpha.addListener("change", () => changeAlpha(alpha));
 let currentSprite;
 const fram = new display_1.Sprite();
 fram.setBorder(1, 0xFF0000, 0.6, "dotted");
-const grid = new ui_1.DisplayGrid();
+const grid = new ui_1.ResizerGrid();
 let numCurrent = 1;
 stage.addListener("keydown", (s, e) => {
     if (currentSprite == null)
@@ -68,7 +71,7 @@ stage.addListener("keydown", (s, e) => {
         e.shiftKey ? currentSprite.width++ : currentSprite.x++;
     }
     if (currentSprite)
-        grid.ajustTo(currentSprite);
+        grid.displayOn(currentSprite);
 });
 function createElement(b, e) {
     if (stage.cursor != "default")
@@ -116,17 +119,17 @@ function setCurrentSprite(el) {
     currentSprite = el;
     if (currentSprite) {
         currentSprite.addChild(grid);
-        grid.ajustTo(currentSprite);
+        grid.displayOn(currentSprite);
     }
 }
-function changeHSL(h) {
-    if (currentSprite != null) {
-        currentSprite.css.backgroundColor = h.hsl;
+function changeColor(h) {
+    if (currentSprite) {
+        currentSprite.setBackground(h.color, currentSprite.backgroundAlpha);
     }
 }
-function changeRGB(r) {
-    if (currentSprite != null) {
-        currentSprite.css.backgroundColor = r.rgb;
+function changeAlpha(alpha) {
+    if (currentSprite) {
+        currentSprite.setBackground(currentSprite.backgroundColor, alpha.pct);
     }
 }
 //# sourceMappingURL=renderer.js.map

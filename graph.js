@@ -1,6 +1,5 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const geom_1 = require("./geom");
 class Color {
     static hex(rgba) {
         let t = rgba.split("(")[1].split(",");
@@ -514,7 +513,8 @@ class Graphics {
         while (this.svg.lastChild) {
             this.svg.removeChild(this.svg.lastChild);
         }
-        this.pos = new geom_1.Point(0, 0);
+        this.x = 0;
+        this.y = 0;
     }
     beginFill(color, alpha = 1.0) {
         this.gradient = null;
@@ -531,29 +531,40 @@ class Graphics {
     }
     drawCircle(x, y, radius) {
         const draw = new GrCircle(this, x, y, radius);
+        this.x = x;
+        this.y = y;
     }
     drawEllipse(x, y, width, height) {
         const draw = new GrEllipse(this, x, y, width, height);
-        this.pos.setTo(x, y);
+        this.x = x;
+        this.y = y;
     }
     drawPolygon(...num) {
         const draw = new GrPolygone(this, num);
-        this.pos.setTo(num[num.length - 2], num[num.length - 1]);
+        this.x = num[num.length - 2];
+        this.y = num[num.length - 1];
     }
     drawRect(x, y, width, height) {
         const draw = new GrRect(this, x, y, width, height);
+        this.x = x;
+        this.y = y;
     }
     drawRoundRect(x, y, width, height, xRadius, yRadius) {
         const draw = new GrRect(this, x, y, width, height, xRadius, yRadius);
-        this.pos.setTo(x, y);
+        this.x = x;
+        this.y = y;
     }
     cubicCurveTo(ax1, ay1, ax2, ay2, x, y) {
-        const draw = new GrPath(this, false, ` M ${this.pos.x} ${this.pos.y}`);
+        const draw = new GrPath(this, false, ` M ${this.x} ${this.y}`);
         draw.cubicCurveTo(true, ax1, ay1, ax2, ay2, x, y);
-        this.pos.setTo(x, y);
+        this.x = x;
+        this.y = y;
     }
     curveTo(ax, ay, x, y) {
-        this.pos.setTo(x, y);
+        const draw = new GrPath(this, false, ` M ${this.x} ${this.y}`);
+        draw.quadraticCurveTo(true, ax, ay, x, y);
+        this.x = x;
+        this.y = y;
     }
     endFill() {
     }
@@ -562,11 +573,13 @@ class Graphics {
             new Stroke(thickness, color, alpha) : null;
     }
     lineTo(x, y) {
-        const line = new GrLine(this, this.pos.x, this.pos.y, x, y);
-        this.pos.setTo(x, y);
+        const line = new GrLine(this, this.x, this.y, x, y);
+        this.x = x;
+        this.y = y;
     }
     moveTo(x, y) {
-        this.pos.setTo(x, y);
+        this.x = x;
+        this.y = y;
     }
 }
 exports.Graphics = Graphics;

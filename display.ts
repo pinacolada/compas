@@ -1,5 +1,6 @@
-import { Point, Rectangle, Matrix, Filter } from "./geom";
+import { Rectangle} from "./geom";
 import { Fill, Stroke, Gradient, Graphics, Color } from "./graph";
+import { valueOf } from "./ui";
 
 /**
  * Renvoie un élément générique
@@ -34,8 +35,7 @@ class Listener {
         this.target = target;
         this.type = type;
         this.callback = callback;
-        let fx = (e: Event) => this.callback(this.target, e);
-        this.target.el.addEventListener(this.type, fx); 
+        this.target.el.addEventListener(this.type, this); 
     }
     /**
      * Réaction à l'événement
@@ -48,8 +48,7 @@ class Listener {
      * Supprime l'écoute et la détruit
      */
     remove(): void {
-        let fx = (e: Event) => this.callback(this.target, e);
-        this.target.el.removeEventListener(this.type, fx);
+        this.target.el.removeEventListener(this.type, this);
         const l:Listener[] = this.target.listeners, i = l.indexOf(this); 
         l.splice(i, 1);
     }
@@ -164,6 +163,13 @@ class EventDispatcher {
             this.el.style.setProperty(propsVals[i], propsVals[++i]);
         }
     }
+    setTransform(type: string, value: string) {
+        let r = type + "(" + value + ")";
+        this.setCss('-moz-transform', r,
+        '-webkit-transform', r,
+        '-o-transform', r,
+        '-ms-transform', r);
+    }
 }
 
 /*******************************************************************************************
@@ -178,28 +184,27 @@ export class DisplayObject extends EventDispatcher {
     css: CSSStyleDeclaration;
     back: Fill;
     border: Stroke;
-    /*
-    blendMode: String;
-    filters: Filter[];
-    rotation: number;
-    rotationX: number;
-    rotationY: number;
-    rotationZ: number;
-    scaleX: number;
-    scaleY: number;
-    scaleZ: number;
-    scrollRect: Rectangle;
-    */
     parent: DisplayObjectContainer | null;
     _stage: Stage | null
     constructor( element:HTMLElement) {
         super(element);
         this.css = this.el.style;
-        this.rect = new Rectangle();
-        this.rect.style = this.css;
+        this.rect = new Rectangle(this.css);
         this.back = new Fill();
         this.border = new Stroke(); 
     }
+
+    clone (classType:any):any {
+        const c = new classType();
+        c.setRect(this.x, this.y, this.width, this.height);
+        c.setBackground(this.backgroundColor, this.backgroundAlpha);
+        c.setBorder(this.borderWidth, this.borderColor, this.borderAlpha, this.borderStyle, this.borderRadius);
+        c.rotation = this.rotation;
+        c.skewX = this.skewX;
+        c.skewY = this.skewY;        
+        return c;
+    }
+
     /**
      * Définit un arrière-plan en dégradé   
      * @param type type du dégradé ("linear"|"radial")
@@ -215,6 +220,11 @@ export class DisplayObject extends EventDispatcher {
         this.css.background = new Gradient("linear", colors, alphas, ratios, angle).css;
         return this;
     }
+
+    rotate3D(x: number, y: number, z: number) {
+           
+    }
+
     /**
      * Définit la couleur et la transparence du fond
      * @param c couleur (0x000000 -> 0xFFFFFF)
@@ -257,6 +267,9 @@ export class DisplayObject extends EventDispatcher {
      */
     setRectAs(r: Rectangle): DisplayObject {
         this.rect.setTo(r.x, r.y, r.width, r.height);
+        this.rect.rot = r.rot;
+        this.rect.skX = r.skX;
+        this.rect.skY = r.skY;
         return this;
     }
     /**
@@ -269,7 +282,7 @@ export class DisplayObject extends EventDispatcher {
      * Met le displayObject au premier-plan sur son parent
      */
     toFront() {
-        if (this.parent) this.parent.addChildAt(this.parent.numChildren - 1, this);
+        if (this.parent) this.parent.addChildAt(this.parent.numChildren, this);
     }
     /**
      * Transparence générale (opacité)
@@ -426,6 +439,36 @@ export class DisplayObject extends EventDispatcher {
             this.dispatch("size");
         }
     }
+    get rotation(): number {
+        return this.rect.rot;
+    }
+    set rotation(value: number) {
+        this.rect.rot = value;
+    }
+    get skewX(): number {
+        return this.rect.skX;
+    }
+    set skewX(value: number) {
+        this.rect.skX = value;
+    }
+    get skewY(): number {
+        return this.rect.skY;
+    }
+    set skewY(value: number) {
+        this.rect.skY = value;
+    }
+    get scaleX(): number {
+        return this.rect.scX;
+    }
+    set scaleX(value: number) {
+        this.rect.scX = value;
+    }
+    get scaleY(): number {
+        return this.rect.scY;
+    }
+    set scaleY(value: number) {
+        this.rect.scY = value;
+    }
 }
 
 /*******************************************************************************************
@@ -436,7 +479,7 @@ export class DisplayObject extends EventDispatcher {
  * @author Jean-Marie PETIT
  */
 class InteractiveObject extends DisplayObject {
-    _tabEnabled: boolean;
+    _tabEnabled: boolean = false;
     constructor(element:HTMLElement) {
         super(element);
         this.mouseEnabled = true;

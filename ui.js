@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const display_1 = require("./display");
-const geom_1 = require("./geom");
 /**
  * Restreint une valeur entre deux limites
  * @param val valeur en cours
@@ -268,15 +267,17 @@ class ColorPicker extends Box {
      * @param target support du sélecteur
      * @param px position horizontale
      * @param py position verticale
-     * @param currentColor couleur à afficher au lancement
+     * @param current couleur à afficher au lancement
+     * @param callbk réaction au changement de sélection
      */
-    constructor(id, target, px, py, currentColor) {
+    constructor(id, target, px, py, current, callbk) {
         super(id, target, px, py, 250, 180, 0x666666, 0xFFFFFF, "outset", 4);
         this.info = new Label("info", this, 34, 3, 220, 20);
-        this.view = new Box("view", this, 3, 3, 30, 20, currentColor, 0x999999, "inset", 0);
+        this.view = new Box("view", this, 3, 3, 30, 20, current, 0x999999, "inset", 0);
         this.view.cursor = "pointer";
         this.view.addListener("click", (b, e) => this.toggleFold(this, b));
-        this.color = currentColor;
+        this.color = current;
+        this.callback = callbk;
     }
     /**
      *  Replie ou déplie le sélecteur quand on clique sur la couleur
@@ -302,10 +303,11 @@ class RGBColorPicker extends ColorPicker {
      * @param target support du sélecteur
      * @param px position horizontale
      * @param py position verticale
-     * @param currentColor couleur à afficher au lancement
+     * @param current couleur à afficher au lancement
+     * @param callbk réaction au changement de sélection
      */
-    constructor(id, target, px, py, currentColor) {
-        super(id, target, px, py, currentColor);
+    constructor(id, target, px, py, current, callbk) {
+        super(id, target, px, py, current, callbk);
         const lg = 12, ht = 11, startX = 14, startY = 32, endX = 223;
         var t = "0369CF", c = "", px = startX, py = startY, r, g, b;
         let view = this.view, pal = this;
@@ -325,7 +327,7 @@ class RGBColorPicker extends ColorPicker {
         /**
          * Magnifier : loupe montrant par déplacement et couleur de fond la couleur choisie
          */
-        let mag = new Box("mag", this, 100, 100, 20, 20, 0xFFFFFF, 0xFFFFFF, "outset", 2);
+        let mag = new Box("mag", this, 100, 100, 24, 24, 0xFFFFFF, 0xFFFFFF, "outset", 12);
         mag.mouseEnabled = false;
         function addColor(el, x, y, c) {
             let d = document.createElement("div");
@@ -338,8 +340,8 @@ class RGBColorPicker extends ColorPicker {
             d.id = c;
             d.style.cursor = "pointer";
             d.addEventListener("mouseover", e => {
-                mag.x = x - 4;
-                mag.y = y - 4;
+                mag.x = x - 6;
+                mag.y = y - 6;
                 view.backgroundColor = parseInt("0x" + c.substr(1));
                 pal.info.text = c;
                 mag.backgroundColor = view.backgroundColor;
@@ -347,8 +349,8 @@ class RGBColorPicker extends ColorPicker {
             d.addEventListener("mouseout", e => {
                 view.backgroundColor = pal.color;
                 if (pal.sel) {
-                    mag.x = parseInt(pal.sel.style.left) - 4;
-                    mag.y = parseInt(pal.sel.style.top) - 4;
+                    mag.x = parseInt(pal.sel.style.left) - 6;
+                    mag.y = parseInt(pal.sel.style.top) - 6;
                     mag.css.backgroundColor = pal.sel.id;
                     pal.info.text = pal.sel.id;
                 }
@@ -373,10 +375,11 @@ class HSLColorPicker extends ColorPicker {
      * @param target support du sélecteur
      * @param px position horizontale
      * @param py position verticale
-     * @param currentColor couleur à afficher au lancement
+     * @param current couleur à afficher au lancement
+     * @param callbk réaction à la modification de valeur
      */
-    constructor(id, target, px, py, current) {
-        super(id, target, px, py, current);
+    constructor(id, target, px, py, current, callbk) {
+        super(id, target, px, py, current, callbk);
         let h = rgbToHsl((current >> 16) & 0xFF, (current >> 8) & 0xFF, current & 0xFF);
         this.hue = new Slider("Hue", this, 10, 35, 210, h[0] * 360, 0, 360, false);
         const par6 = 255 / 6;
@@ -385,11 +388,12 @@ class HSLColorPicker extends ColorPicker {
         this.sat.gradientBackground([0x000000, 0xFFFFFF], [1, 1], [0, 255], 90);
         this.lum = new Slider("Lum", this, 10, 125, 210, h[2], 0, 1, true);
         this.lum.gradientBackground([0x000000, 0xFFFFFF], [1, 1], [0, 255], 90);
-        this.hue.addListener("change", (s, e) => this.change());
-        this.sat.addListener("change", (s, e) => this.change());
-        this.lum.addListener("change", (s, e) => this.change());
+        this.hue.addListener("change", () => this.change());
+        this.sat.addListener("change", () => this.change());
+        this.lum.addListener("change", () => this.change());
         this.change();
         this.toggleFold(this, this.view);
+        this.callback = callbk;
     }
     change() {
         this.view.css.backgroundColor = this.hsl;
@@ -411,10 +415,11 @@ class HSVColorPicker extends ColorPicker {
      * @param target support du sélecteur
      * @param px position horizontale
      * @param py position verticale
-     * @param currentColor couleur à afficher au lancement
+     * @param current couleur à afficher au lancement
+     * @param callbk réaction au changement de sélection
      */
-    constructor(id, target, px, py, current) {
-        super(id, target, px, py, current);
+    constructor(id, target, px, py, current, callbk) {
+        super(id, target, px, py, current, callbk);
     }
 }
 exports.HSVColorPicker = HSVColorPicker;
@@ -457,16 +462,21 @@ class ResizerGrid extends display_1.Sprite {
         this.name = "resizerGrid";
         this.setRect(0, 0, 100, 100);
         this.mouseEnabled = false; // l'élément actif l'est sous la grille
-        let mk = ["pos", "move", "siz", "nesw-resize", "rot", "move", "sky", "n-resize", "skx", "e-resize"];
+        let mk = ["pos", "move", "Déplacer",
+            "res", "pointer", "Annuler les déformations",
+            "siz", "nwse-resize", "Redimensionner",
+            "rot", "move", "Faire tourner",
+            "sky", "n-resize", "Tordre verticalement",
+            "skx", "e-resize", "Tordre horizontalement"];
         for (let i = 0; i < mk.length; i++)
-            this.createAnchor(mk[i], mk[++i]);
+            this.createAnchor(mk[i], mk[++i], mk[++i]);
     }
     /**
      * Définit, affiche et active une ancre de la grille
      * @param name nom de l'ancre
      * @param curs forme du curseur pour l'ancre
      */
-    createAnchor(name, curs) {
+    createAnchor(name, curs, title) {
         let spr = new display_1.Sprite;
         spr.name = name;
         spr.setBackground(0x00FFFF, 0.9);
@@ -474,6 +484,7 @@ class ResizerGrid extends display_1.Sprite {
         spr.cursor = curs;
         this.addChild(spr);
         spr.addListener("mousedown", this.changeGrid);
+        spr.setAttr("title", title);
         this.anchors.push(spr);
         return spr;
     }
@@ -491,6 +502,9 @@ class ResizerGrid extends display_1.Sprite {
                 case "pos":
                     anchor.setRect(-gc, -gc, cc, cc);
                     break;
+                case "res":
+                    anchor.setRect(mw - mc, -gc, cc, cc);
+                    break;
                 case "rot":
                     anchor.setRect(w - dc, -gc, cc, cc);
                     break;
@@ -505,6 +519,7 @@ class ResizerGrid extends display_1.Sprite {
                     break;
             }
         }
+        s.toFront();
         display_1.findIn("rect").value = `(x:${s.x},y:${s.y})-(W:${s.width}-H:${s.height})`;
     }
     /**
@@ -531,7 +546,10 @@ class ResizerGrid extends display_1.Sprite {
             el.removeEventListener("mouseup", endResize);
         }
         function resizeGrid(e) {
-            let souris = new geom_1.Point(model.stageX - (model.x + model.width / 2), model.stageY - (model.y + model.height / 2));
+            let souris = {
+                x: model.stageX - (model.x + model.width / 2),
+                y: model.stageY - (model.y + model.height / 2)
+            };
             let deg = Math.atan2(souris.y, souris.x) * 180 / Math.PI;
             switch (anchor.name) {
                 case "pos":
@@ -542,19 +560,21 @@ class ResizerGrid extends display_1.Sprite {
                     model.width += e.movementX;
                     model.height += e.movementY;
                     break;
+                case "res":
+                    model.rotation = 0;
+                    model.skewX = 0;
+                    model.skewY = 0;
+                    break;
                 case "rot":
                     deg += 45;
-                    let r = 'rotate(' + deg + 'deg)';
-                    model.setCss('-moz-transform', r, '-webkit-transform', r, '-o-transform', r, '-ms-transform', r);
+                    model.rotation = deg;
                     break;
                 case "skx":
                     deg += 90;
-                    let sx = 'skewX(-' + deg + 'deg)';
-                    model.setCss('-moz-transform', sx, '-webkit-transform', sx, '-o-transform', sx, '-ms-transform', sx);
+                    model.skewX = -deg;
                     break;
                 case "sky":
-                    let sy = 'skewY(' + deg + 'deg)';
-                    model.setCss('-moz-transform', sy, '-webkit-transform', sy, '-o-transform', sy, '-ms-transform', sy);
+                    model.skewY = deg;
                     break;
             }
             grid.displayOn(model);

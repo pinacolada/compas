@@ -31,8 +31,7 @@ class Listener {
         this.target = target;
         this.type = type;
         this.callback = callback;
-        let fx = (e) => this.callback(this.target, e);
-        this.target.el.addEventListener(this.type, fx);
+        this.target.el.addEventListener(this.type, this);
     }
     /**
      * Réaction à l'événement
@@ -45,8 +44,7 @@ class Listener {
      * Supprime l'écoute et la détruit
      */
     remove() {
-        let fx = (e) => this.callback(this.target, e);
-        this.target.el.removeEventListener(this.type, fx);
+        this.target.el.removeEventListener(this.type, this);
         const l = this.target.listeners, i = l.indexOf(this);
         l.splice(i, 1);
     }
@@ -159,6 +157,10 @@ class EventDispatcher {
             this.el.style.setProperty(propsVals[i], propsVals[++i]);
         }
     }
+    setTransform(type, value) {
+        let r = type + "(" + value + ")";
+        this.setCss('-moz-transform', r, '-webkit-transform', r, '-o-transform', r, '-ms-transform', r);
+    }
 }
 /*******************************************************************************************
 *  D I S P L A Y  O B J E C T
@@ -171,10 +173,19 @@ class DisplayObject extends EventDispatcher {
     constructor(element) {
         super(element);
         this.css = this.el.style;
-        this.rect = new geom_1.Rectangle();
-        this.rect.style = this.css;
+        this.rect = new geom_1.Rectangle(this.css);
         this.back = new graph_1.Fill();
         this.border = new graph_1.Stroke();
+    }
+    clone(classType) {
+        const c = new classType();
+        c.setRect(this.x, this.y, this.width, this.height);
+        c.setBackground(this.backgroundColor, this.backgroundAlpha);
+        c.setBorder(this.borderWidth, this.borderColor, this.borderAlpha, this.borderStyle, this.borderRadius);
+        c.rotation = this.rotation;
+        c.skewX = this.skewX;
+        c.skewY = this.skewY;
+        return c;
     }
     /**
      * Définit un arrière-plan en dégradé
@@ -187,6 +198,8 @@ class DisplayObject extends EventDispatcher {
     gradientBackground(colors, alphas, ratios, angle) {
         this.css.background = new graph_1.Gradient("linear", colors, alphas, ratios, angle).css;
         return this;
+    }
+    rotate3D(x, y, z) {
     }
     /**
      * Définit la couleur et la transparence du fond
@@ -231,6 +244,9 @@ class DisplayObject extends EventDispatcher {
      */
     setRectAs(r) {
         this.rect.setTo(r.x, r.y, r.width, r.height);
+        this.rect.rot = r.rot;
+        this.rect.skX = r.skX;
+        this.rect.skY = r.skY;
         return this;
     }
     /**
@@ -245,7 +261,7 @@ class DisplayObject extends EventDispatcher {
      */
     toFront() {
         if (this.parent)
-            this.parent.addChildAt(this.parent.numChildren - 1, this);
+            this.parent.addChildAt(this.parent.numChildren, this);
     }
     /**
      * Transparence générale (opacité)
@@ -402,6 +418,36 @@ class DisplayObject extends EventDispatcher {
             this.dispatch("size");
         }
     }
+    get rotation() {
+        return this.rect.rot;
+    }
+    set rotation(value) {
+        this.rect.rot = value;
+    }
+    get skewX() {
+        return this.rect.skX;
+    }
+    set skewX(value) {
+        this.rect.skX = value;
+    }
+    get skewY() {
+        return this.rect.skY;
+    }
+    set skewY(value) {
+        this.rect.skY = value;
+    }
+    get scaleX() {
+        return this.rect.scX;
+    }
+    set scaleX(value) {
+        this.rect.scX = value;
+    }
+    get scaleY() {
+        return this.rect.scY;
+    }
+    set scaleY(value) {
+        this.rect.scY = value;
+    }
 }
 exports.DisplayObject = DisplayObject;
 /*******************************************************************************************
@@ -414,6 +460,7 @@ exports.DisplayObject = DisplayObject;
 class InteractiveObject extends DisplayObject {
     constructor(element) {
         super(element);
+        this._tabEnabled = false;
         this.mouseEnabled = true;
     }
     /**

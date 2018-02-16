@@ -1,4 +1,4 @@
-import { Point, Rectangle, Matrix, Filter } from "./geom";
+import { Rectangle } from "./geom";
 import { DisplayObject } from "./display";
 
 export class Color {
@@ -529,8 +529,9 @@ export class Graphics {
     fill: Fill | null;
     stroke: Stroke | null;
     gradient: Gradient | null;
-    pos: Point;
     svg: SVGSVGElement;
+    x: number;
+    y: number;
     constructor(disp: DisplayObject, el:HTMLElement) {
         this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         this.svg.style.pointerEvents = "none";
@@ -546,7 +547,8 @@ export class Graphics {
         while (this.svg.lastChild) {
            this.svg.removeChild(this.svg.lastChild) 
         }
-        this.pos = new Point(0, 0);
+        this.x = 0;
+        this.y = 0;
     }
     beginFill(color?: number, alpha: number = 1.0): void {
         this.gradient = null;
@@ -562,42 +564,55 @@ export class Graphics {
     }
     drawCircle(x: number, y: number, radius: number): void {
         const draw = new GrCircle(this, x, y, radius);
+        this.x = x;
+        this.y = y;
     }
     drawEllipse(x: number, y: number, width: number, height: number): void {
         const draw = new GrEllipse(this, x, y, width, height);
-        this.pos.setTo(x, y);
+        this.x = x;
+        this.y = y;
     }
     drawPolygon(...num:number[]) {
         const draw = new GrPolygone(this, num);
-        this.pos.setTo(num[num.length - 2], num[num.length - 1]);
+        this.x = num[num.length-2];
+        this.y = num[num.length-1];
     }
     drawRect(x: number, y: number, width: number, height: number): void {
         const draw = new GrRect(this, x, y, width, height);
+        this.x = x;
+        this.y = y;
     }
     drawRoundRect(x: number, y: number, width: number, height: number, xRadius: number, yRadius?: number): void {
         const draw = new GrRect(this, x, y, width, height, xRadius, yRadius);
-        this.pos.setTo(x, y);
+        this.x = x;
+        this.y = y;
     }
     cubicCurveTo(ax1: number, ay1: number, ax2: number, ay2: number, x: number, y: number): void {
-        const draw = new GrPath(this, false, ` M ${this.pos.x} ${this.pos.y}`);
+        const draw = new GrPath(this, false, ` M ${this.x} ${this.y}`);
         draw.cubicCurveTo(true, ax1, ay1, ax2, ay2, x, y);
-        this.pos.setTo(x, y);
+        this.x = x;
+        this.y = y;
     }
     curveTo(ax: number, ay: number, x: number, y: number): void {
-
-        this.pos.setTo(x, y);
+        const draw = new GrPath(this, false, ` M ${this.x} ${this.y}`);
+        draw.quadraticCurveTo(true, ax, ay, x, y);
+        this.x = x;
+        this.y = y;
     }
     endFill(): void {
+
     }
     lineStyle(thickness?: number, color?: number, alpha?: number): void {
         this.stroke = (color != undefined) ?
             new Stroke(thickness, color, alpha) : null;
     }
     lineTo(x: number, y: number): void {
-        const line = new GrLine(this, this.pos.x, this.pos.y, x, y);
-        this.pos.setTo(x, y);
+        const line = new GrLine(this, this.x, this.y, x, y);
+        this.x = x;
+        this.y = y;
     }
     moveTo(x: number, y: number): void {
-        this.pos.setTo(x, y);
+        this.x = x;
+        this.y = y;
     }
 }

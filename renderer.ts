@@ -1,7 +1,9 @@
 import {DisplayObjectContainer, DisplayObject, Stage, Sprite, Shape, TextField, TextFormat, findIn } from "./display";
-import { Button, ResizerGrid, HSLColorPicker, RGBColorPicker, Slider, ColorPicker } from "./ui";
+import { Button, ResizerGrid, HSLColorPicker, RGBColorPicker, Slider, ColorPicker, HSVColorPicker } from "./ui";
+import { Rectangle } from  "./geom";
 
 let stage: Stage = new Stage(1024, 600, 0x9999FF);
+
 var carre: Sprite = new Sprite();
 carre.name = "carré";
 stage.addChild(carre);
@@ -51,11 +53,13 @@ for (let j = 0; j < stage.height; j += 50) {
     stage.graphics.moveTo(0, j);
     stage.graphics.lineTo(stage.width, j);
 }
-let hsl: HSLColorPicker = new HSLColorPicker("hsl", stage, 25, 310, 0xFF00FF);
-hsl.callback = changeColor;
 
-let rp: RGBColorPicker = new RGBColorPicker("rgb", stage, 125, 310, 0x336699);
-rp.callback = changeColor;
+let currentSprite: Sprite | null;
+let newS: Sprite | null;
+
+let hsl: HSLColorPicker = new HSLColorPicker("hsl", stage, 25, 310, 0xFF00FF, changeColor);
+let rp: RGBColorPicker = new RGBColorPicker("rgb", stage, 125, 310, 0x336699, changeColor);
+// let hsv: HSVColorPicker = new HSVColorPicker("hsv", stage, 80, 310, 0x66FF66, changeColor);
 
 const bCreEl:Button = new Button("cre", stage, 735, 70, 150, 40, 0x666666, "Créer un élément");
 bCreEl.addListener("click", createElement);
@@ -64,7 +68,6 @@ let alpha = new Slider("alpha", stage, 25, 550, 200, 1, 0, 1, true);
 alpha.gradientBackground([0x000000, 0x000000], [0, 1], [0, 255], 90);
 alpha.addListener("change", () => changeAlpha(alpha));
 
-let currentSprite: Sprite | null;
 const fram: Sprite = new Sprite();
 fram.setBorder(1, 0xFF0000, 0.6, "dotted");
 
@@ -78,13 +81,22 @@ stage.addListener("keydown", (s:Stage, e: KeyboardEvent) => {
         s.removeChild(currentSprite);
         currentSprite = null;
     } else if (e.key === "ArrowUp") {
-        e.shiftKey ? currentSprite.height-- : currentSprite.y--;    
+        e.shiftKey ? currentSprite.height-- : currentSprite.y--;
     } else if (e.key === "ArrowDown") {
-        e.shiftKey ? currentSprite.height ++ : currentSprite.y++;
+        e.shiftKey ? currentSprite.height++ : currentSprite.y++;
     } else if (e.key === "ArrowLeft") {
-        e.shiftKey? currentSprite.width -- : currentSprite.x--;    
+        e.shiftKey ? currentSprite.width-- : currentSprite.x--;
     } else if (e.key === "ArrowRight") {
-        e.shiftKey? currentSprite.width++ : currentSprite.x++;
+        e.shiftKey ? currentSprite.width++ : currentSprite.x++;
+    } else if (e.key === "c" && e.ctrlKey) {
+        newS = <Sprite>currentSprite.clone(Sprite);
+    } else if (e.key === "v" && e.ctrlKey && newS != null && newS !== currentSprite) {
+        stage.addChild(newS);
+        newS.x += 20;
+        newS.y -= 20;
+        setCurrentSprite(newS);
+    } else {
+        console.log("ctrlKey :", e.ctrlKey, "- shiftKey :", e.shiftKey, "- keyCode:", e.keyCode, "-key :", e.key);
     }
     if(currentSprite) grid.displayOn(currentSprite);
 });
@@ -114,18 +126,21 @@ function createElement(b:Button, e: MouseEvent) {
         s.removeListener("mouseup", endDrag);
         s.removeListener("mousemove", drag);
         if (fram.rect.width > 0 && fram.rect.height > 0) {
-            let el = new Sprite();
-            el.name = "item_" + numCurrent++;
-            el.setRectAs(fram.rect);
-            el.setBackground(0xFFFFFF, 1.0);
-            el.setBorder(1, 0x000000, 1.0, "solid");
-            stage.addChild(el);    
-            setCurrentSprite(el);
-            el.addListener("mousedown", setCurrentSprite);
+            createSprite(fram.rect)
         }
         stage.removeChild(fram);
         stage.cursor = "default";
     }
+}
+
+function createSprite(r:Rectangle) {
+    let el = new Sprite();
+    el.name = "item_" + numCurrent++;
+    el.setRectAs(r);
+    el.setBackground(0xFFFFFF, 0.5);
+    el.setBorder(1, 0x000000, 1.0, "solid");
+    stage.addChild(el);    
+    setCurrentSprite(el); 
 }
 
 function setCurrentSprite(el: Sprite) {
@@ -134,6 +149,7 @@ function setCurrentSprite(el: Sprite) {
         currentSprite.addChild(grid);
         grid.displayOn(currentSprite);
     }
+    el.addListener("mousedown", setCurrentSprite);
 }
 function changeColor(h:ColorPicker) {
     if (currentSprite) {

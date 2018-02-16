@@ -36,16 +36,16 @@ for (let j = 0; j < stage.height; j += 50) {
     stage.graphics.moveTo(0, j);
     stage.graphics.lineTo(stage.width, j);
 }
-let hsl = new ui_1.HSLColorPicker("hsl", stage, 25, 310, 0xFF00FF);
-hsl.callback = changeColor;
-let rp = new ui_1.RGBColorPicker("rgb", stage, 125, 310, 0x336699);
-rp.callback = changeColor;
+let currentSprite;
+let newS;
+let hsl = new ui_1.HSLColorPicker("hsl", stage, 25, 310, 0xFF00FF, changeColor);
+let rp = new ui_1.RGBColorPicker("rgb", stage, 125, 310, 0x336699, changeColor);
+// let hsv: HSVColorPicker = new HSVColorPicker("hsv", stage, 80, 310, 0x66FF66, changeColor);
 const bCreEl = new ui_1.Button("cre", stage, 735, 70, 150, 40, 0x666666, "Créer un élément");
 bCreEl.addListener("click", createElement);
 let alpha = new ui_1.Slider("alpha", stage, 25, 550, 200, 1, 0, 1, true);
 alpha.gradientBackground([0x000000, 0x000000], [0, 1], [0, 255], 90);
 alpha.addListener("change", () => changeAlpha(alpha));
-let currentSprite;
 const fram = new display_1.Sprite();
 fram.setBorder(1, 0xFF0000, 0.6, "dotted");
 const grid = new ui_1.ResizerGrid();
@@ -69,6 +69,18 @@ stage.addListener("keydown", (s, e) => {
     }
     else if (e.key === "ArrowRight") {
         e.shiftKey ? currentSprite.width++ : currentSprite.x++;
+    }
+    else if (e.key === "c" && e.ctrlKey) {
+        newS = currentSprite.clone(display_1.Sprite);
+    }
+    else if (e.key === "v" && e.ctrlKey && newS != null && newS !== currentSprite) {
+        stage.addChild(newS);
+        newS.x += 20;
+        newS.y -= 20;
+        setCurrentSprite(newS);
+    }
+    else {
+        console.log("ctrlKey :", e.ctrlKey, "- shiftKey :", e.shiftKey, "- keyCode:", e.keyCode, "-key :", e.key);
     }
     if (currentSprite)
         grid.displayOn(currentSprite);
@@ -102,18 +114,20 @@ function createElement(b, e) {
         s.removeListener("mouseup", endDrag);
         s.removeListener("mousemove", drag);
         if (fram.rect.width > 0 && fram.rect.height > 0) {
-            let el = new display_1.Sprite();
-            el.name = "item_" + numCurrent++;
-            el.setRectAs(fram.rect);
-            el.setBackground(0xFFFFFF, 1.0);
-            el.setBorder(1, 0x000000, 1.0, "solid");
-            stage.addChild(el);
-            setCurrentSprite(el);
-            el.addListener("mousedown", setCurrentSprite);
+            createSprite(fram.rect);
         }
         stage.removeChild(fram);
         stage.cursor = "default";
     }
+}
+function createSprite(r) {
+    let el = new display_1.Sprite();
+    el.name = "item_" + numCurrent++;
+    el.setRectAs(r);
+    el.setBackground(0xFFFFFF, 0.5);
+    el.setBorder(1, 0x000000, 1.0, "solid");
+    stage.addChild(el);
+    setCurrentSprite(el);
 }
 function setCurrentSprite(el) {
     currentSprite = el;
@@ -121,6 +135,7 @@ function setCurrentSprite(el) {
         currentSprite.addChild(grid);
         grid.displayOn(currentSprite);
     }
+    el.addListener("mousedown", setCurrentSprite);
 }
 function changeColor(h) {
     if (currentSprite) {
